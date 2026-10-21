@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# wakacraft
 
-## Getting Started
+Automatic time tracking for developers. wakacraft implements the WakaTime API, so **every WakaTime editor plugin
+works with it unchanged**. Point the plugin at your wakacraft instance and keep coding.
 
-First, run the development server:
+Next.js 16 · TypeScript · MongoDB (Mongoose) · Zod · Better Auth · Tailwind + shadcn/ui
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+cp .env.example .env.local        # then set BETTER_AUTH_SECRET (openssl rand -base64 32)
+bun run db                        # local MongoDB, no Docker needed (keep it running)
+bun run dev                       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sign up, open **Settings → API keys**, create a key, then put this in `~/.wakatime.cfg`
+(`%USERPROFILE%\.wakatime.cfg` on Windows):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```ini
+[settings]
+api_url = http://localhost:3000/api/v1
+api_key = waka_…
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Restart your editor. Heartbeats show up on the dashboard within a couple of minutes. To explore the UI before any
+real activity exists: `bun run seed:demo you@example.com`.
 
-## Learn More
+## What works today
 
-To learn more about Next.js, take a look at the following resources:
+| Area | Status |
+| --- | --- |
+| Heartbeat ingestion — `POST heartbeats`, `heartbeats.bulk` (wakatime-cli wire format, offline-queue dedup), `GET`/`DELETE` heartbeats | ✅ |
+| Auth — session, `Basic base64(api_key)`, `Bearer`, `?api_key=`; multiple hashed API keys per user | ✅ |
+| `summaries` (start/end or named ranges, project/branch filters, timeout/writes_only/timezone overrides) | ✅ |
+| `durations` with every `slice_by` · `stats` and `stats/:range` · `status_bar/today` (+ `statusbar/today` used by `wakatime-cli --today`) · `all_time_since_today` | ✅ |
+| `projects`, `user_agents`, `machine_names`, `users/current` | ✅ |
+| Editor/OS detection from plugin user agents (VS Code, Cursor, JetBrains IDEs, Neovim, …) | ✅ |
+| AI coding fields (AI vs human line changes, tokens, sessions) | ✅ |
+| Dashboard: stat tiles, 12-month heatmap, daily stacked chart, timeline, language/editor donuts, weekdays, projects, categories, machines | ✅ |
+| CORS for browser-extension plugins | ✅ |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The full feature-parity plan is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploying to Vercel
 
-## Deploy on Vercel
+1. Create a MongoDB Atlas cluster and copy the connection string.
+2. Import the repo into Vercel and set `MONGODB_URI`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (your public URL),
+   `MONGODB_TRANSACTIONS=true`, and optionally `GITHUB_*` / `GOOGLE_*` OAuth credentials.
+3. Users set `api_url = https://<your-domain>/api/v1`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Development
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [AGENTS.md](AGENTS.md) for architecture and conventions. Key commands: `bun run sync` (regenerate zod DTOs after
+a schema change), `bun run test`, `bun run preflight`.

@@ -1,35 +1,74 @@
 {
-  "name": "wakacraft",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.4.2",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.4.2",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  },
-  "packageManager": "bun@1.4.3",
-  "ignoreScripts": [
-    "sharp",
-    "unrs-resolver"
-  ],
-  "trustedDependencies": [
-    "sharp",
-    "unrs-resolver"
-  ]
+	"name": "wakacraft",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"lint": "eslint",
+		"format": "prettier --write --cache .",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"sync": "bun ./src/lib/scripts/sync.ts",
+		"sync:force": "bun ./src/lib/scripts/sync.ts --force",
+		"preflight": "bun run sync && bun run format && bun run typecheck && bun run lint && bun run test && bun run build",
+		"db": "bun ./scripts/dev-db.ts",
+		"seed:demo": "bun ./scripts/seed-demo.ts"
+	},
+	"dependencies": {
+		"@date-fns/tz": "^1.5.0",
+		"@sapphire/snowflake": "^3.5.5",
+		"better-auth": "^1.7.12",
+		"class-variance-authority": "^0.7.1",
+		"cn": "^0.5.0",
+		"date-fns": "^4.4.0",
+		"lucide-react": "^1.61.0",
+		"mongodb": "^7.7.0",
+		"mongoose": "^9.8.0",
+		"next": "16.4.2",
+		"next-themes": "^0.4.6",
+		"radix-ui": "^1.8.1",
+		"react": "19.3.0",
+		"react-day-picker": "^10.0.2",
+		"react-dom": "19.3.0",
+		"recharts": "3.8.0",
+		"server-only": "^0.0.1",
+		"shadcn": "^4.22.1",
+		"sonner": "^2.0.8",
+		"tw-animate-css": "^1.4.0",
+		"zod": "^4.4.3"
+	},
+	"devDependencies": {
+		"@tailwindcss/turbopack": "^4",
+		"@types/bun": "^1.4.3",
+		"@types/node": "^20",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"eslint": "^9",
+		"eslint-config-next": "16.4.2",
+		"json-schema-to-zod": "^2.8.1",
+		"mongodb-memory-server": "^11.3.0",
+		"mongoose-schema-jsonschema": "4.0.1",
+		"prettier": "^3.9.10",
+		"tailwindcss": "^4",
+		"typescript": "^5",
+		"vitest": "^5.0.5"
+	},
+	"packageManager": "bun@1.4.3",
+	"ignoreScripts": [
+		"sharp",
+		"unrs-resolver"
+	],
+	"trustedDependencies": [
+		"sharp",
+		"unrs-resolver"
+	],
+	"patchedDependencies": {
+		"mongoose-schema-jsonschema@4.0.1": "patches/mongoose-schema-jsonschema-npm-4.0.1-14b522d1c0.patch"
+	},
+	"engines": {
+		"node": ">=24"
+	}
 }

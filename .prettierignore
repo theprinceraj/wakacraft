@@ -1,0 +1,6 @@
+.next
+.data
+node_modules
+bun.lock
+src/lib/.srchash
+next-env.d.ts

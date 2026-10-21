@@ -1,0 +1,182 @@
+import { createHash } from 'node:crypto';
+
+import { z } from 'zod';
+
+import { NotFoundException } from '@/lib/http/errors';
+import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
+import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
+import { addDays, localDateOf, localDayBounds } from '@/lib/util/Time';
+import { machineService } from '@/server/machine/machine.service';
+import { projectService } from '@/server/project/project.service';
+import { userAgentService } from '@/server/user-agent/user-agent.service';
+import { userProfileService } from '@/server/user/user-profile.service';
+
+import { HeartbeatRequestSchema, type HeartbeatInput } from './heartbeat.request.dto';
+import { toHeartbeatResponse, type HeartbeatResponse } from './heartbeat.response.dto';
+
+import type { IHeartbeatZodSchema } from '@/lib/mongo/zod';
+
+export interface IngestContext {
+	/** `User-Agent` header; a heartbeat's own `user_agent` field takes precedence. */
+	userAgent: string | null;
+	/** `X-Machine-Name` header. */
+	machineName: string | null;
+}
+
+/** One element of the bulk response: `[body, status]`, exactly as wakatime-cli parses it. */
+export type IngestResult =
+	| [{ data: Pick<IHeartbeatZodSchema, 'id' | 'entity' | 'type' | 'time'> }, 201]
+	| [{ error: string; errors?: Record<string, string[]> }, 400];
+
+const dedupHash = (userId: string, heartbeat: HeartbeatInput, machine: string | null, userAgent: string | null) =>
+	createHash('sha1')
+		.update(
+			JSON.stringify([
+				userId,
+				heartbeat.time,
+				heartbeat.entity,
+				heartbeat.type,
+				heartbeat.category,
+				heartbeat.project ?? null,
+				heartbeat.branch ?? null,
+				heartbeat.language ?? null,
+				heartbeat.isWrite,
+				heartbeat.lineno ?? null,
+				heartbeat.cursorpos ?? null,
+				heartbeat.lines ?? null,
+				heartbeat.aiLineChanges ?? null,
+				heartbeat.humanLineChanges ?? null,
+				machine,
+				userAgent,
+			]),
+		)
+		.digest('hex');
+
+class HeartbeatService {
+	/**
+	 * Validates each raw heartbeat independently, stores the valid ones (skipping offline-queue resends), and
+	 * returns one `[body, status]` pair per input in input order.
+	 */
+	public async ingest(userId: string, rawHeartbeats: unknown[], context: IngestContext): Promise<IngestResult[]> {
+		const results: (IngestResult | null)[] = rawHeartbeats.map(() => null);
+		const valid: { index: number; heartbeat: HeartbeatInput }[] = [];
+
+		rawHeartbeats.forEach((raw, index) => {
+			const parsed = HeartbeatRequestSchema.safeParse(raw);
+			if (parsed.success) valid.push({ index, heartbeat: parsed.data });
+			else {
+				const { fieldErrors } = z.flattenError(parsed.error);
+				results[index] = [
+					{
+						error: parsed.error.issues[0]?.message ?? 'Invalid heartbeat',
+						errors: Object.fromEntries(
+							Object.entries(fieldErrors).filter((entry): entry is [string, string[]] => Array.isArray(entry[1])),
+						),
+					},
+					400,
+				];
+			}
+		});
+
+		if (valid.length) {
+			const machine = context.machineName?.trim().slice(0, 256) || null;
+			const [machineRecord, userAgents] = await Promise.all([
+				machine ? machineService.touch(userId, machine) : null,
+				userAgentService.touchMany(
+					userId,
+					valid.map(({ heartbeat }) => heartbeat.userAgent ?? context.userAgent),
+				),
+			]);
+
+			const docs = valid.map(({ heartbeat }) => {
+				const userAgentValue = heartbeat.userAgent ?? context.userAgent;
+				const userAgent = userAgentValue ? userAgents.get(userAgentValue) : undefined;
+				const { userAgent: _userAgent, ...fields } = heartbeat;
+				return {
+					...fields,
+					userId,
+					userAgentId: userAgent?.id,
+					editor: userAgent?.editor ?? undefined,
+					operatingSystem: userAgent?.os ?? undefined,
+					machine: machineRecord?.name,
+					dedupHash: dedupHash(userId, heartbeat, machine, userAgentValue),
+				};
+			});
+
+			const { inserted } = await mongoHeartbeatService.insertManyIgnoringDuplicates(docs);
+			const existingIds = await this.idsForDuplicates(
+				userId,
+				docs.filter((_doc, index) => inserted[index] === null).map((doc) => doc.dedupHash),
+			);
+
+			valid.forEach(({ index, heartbeat }, position) => {
+				const id = inserted[position]?.id ?? existingIds.get(docs[position].dedupHash) ?? '';
+				results[index] = [{ data: { id, entity: heartbeat.entity, type: heartbeat.type, time: heartbeat.time } }, 201];
+			});
+
+			const stored = inserted.filter((heartbeat): heartbeat is IHeartbeatZodSchema => heartbeat !== null);
+			if (stored.length) await this.afterInsert(userId, stored);
+		}
+
+		return results as IngestResult[];
+	}
+
+	public async listForDate(userId: string, date: string, timezone: string): Promise<HeartbeatResponse[]> {
+		const { start, end } = localDayBounds(date, timezone);
+		const heartbeats = await mongoHeartbeatService.findInRange(userId, start, end);
+		return heartbeats.map(toHeartbeatResponse);
+	}
+
+	public async deleteForDate(userId: string, date: string, timezone: string, ids: string[]): Promise<void> {
+		const { start, end } = localDayBounds(date, timezone);
+		const { deletedCount } = await mongoHeartbeatService.deleteMany({
+			userId,
+			id: { $in: ids },
+			time: { $gte: start, $lt: end },
+		});
+		if (!deletedCount) throw new NotFoundException('No matching heartbeats on that date');
+		await this.invalidateRollups(userId, [start]);
+	}
+
+	private async idsForDuplicates(userId: string, hashes: string[]): Promise<Map<string, string>> {
+		if (!hashes.length) return new Map();
+		const existing = (await mongoHeartbeatService.find({ userId, dedupHash: { $in: hashes } }, 'id +dedupHash')) as {
+			id: string;
+			dedupHash: string;
+		}[];
+		return new Map(existing.map((heartbeat) => [heartbeat.dedupHash, heartbeat.id]));
+	}
+
+	private async afterInsert(userId: string, stored: IHeartbeatZodSchema[]): Promise<void> {
+		const latest = stored.reduce((a, b) => (b.time > a.time ? b : a));
+
+		await Promise.all([
+			projectService.touchFromHeartbeats(userId, stored),
+			this.invalidateRollups(
+				userId,
+				stored.map((heartbeat) => heartbeat.time),
+			),
+			userProfileService.recordActivity(userId, {
+				lastHeartbeatAt: new Date(latest.time * 1000),
+				lastPlugin: latest.editor ?? undefined,
+				lastProject: latest.project ?? undefined,
+				lastBranch: latest.branch ?? undefined,
+			}),
+		]);
+	}
+
+	/**
+	 * Drops cached day rollups a heartbeat could belong to. Rollups are per timezone, and an instant falls on the
+	 * UTC date or one day either side of it in every timezone — so those three dates cover all cached variants.
+	 */
+	private async invalidateRollups(userId: string, times: number[]): Promise<void> {
+		const dates = new Set<string>();
+		for (const time of times) {
+			const utcDate = localDateOf(time, 'UTC');
+			dates.add(addDays(utcDate, -1)).add(utcDate).add(addDays(utcDate, 1));
+		}
+		await mongoDailySummaryService.deleteMany({ userId, date: { $in: [...dates] } });
+	}
+}
+
+export const heartbeatService = new HeartbeatService();
