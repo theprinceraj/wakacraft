@@ -1,7 +1,7 @@
 import { getSessionCookie } from 'better-auth/cookies';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const APP_PATHS = ['/dashboard', '/projects', '/settings'];
+const APP_PATHS = ['/dashboard', '/projects', '/goals', '/settings'];
 
 const CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
@@ -36,5 +36,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ['/api/v1/:path*', '/dashboard/:path*', '/projects/:path*', '/settings/:path*'],
+	matcher: ['/api/v1/:path*', '/dashboard/:path*', '/projects/:path*', '/goals/:path*', '/settings/:path*'],
 };

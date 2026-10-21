@@ -12,10 +12,28 @@ export interface StatsSettings {
 	writesOnly: boolean;
 }
 
+/** Narrows which heartbeats count. Any filter bypasses the rollup cache, since rollups hold unfiltered totals. */
 export interface StatsFilter {
 	project?: string;
 	branches?: string[];
+	/** Match any of these (goals combine several dimensions; values are the stored names, e.g. "VS Code"). */
+	projects?: string[];
+	languages?: string[];
+	editors?: string[];
+	categories?: string[];
 }
+
+const anyOf = (values: string[] | undefined) => (values?.length ? { $in: values } : undefined);
+
+export const isFiltered = (filter: StatsFilter) =>
+	Boolean(
+		filter.project ||
+		filter.branches?.length ||
+		filter.projects?.length ||
+		filter.languages?.length ||
+		filter.editors?.length ||
+		filter.categories?.length,
+	);
 
 /** Only the fields the engine reads — heartbeats are the bulk of the data, so don't drag the rest along. */
 const ENGINE_FIELDS =
@@ -41,11 +59,14 @@ export const emptyTotals = (): DayTotals => ({
 });
 
 export function heartbeatFilter(settings: StatsSettings, filter: StatsFilter): Record<string, unknown> {
-	return {
-		...(settings.writesOnly ? { isWrite: true } : {}),
-		...(filter.project ? { project: filter.project } : {}),
-		...(filter.branches?.length ? { branch: { $in: filter.branches } } : {}),
-	};
+	const match: Record<string, unknown> = settings.writesOnly ? { isWrite: true } : {};
+	const project = filter.project ? filter.project : anyOf(filter.projects);
+	if (project) match.project = project;
+	if (filter.branches?.length) match.branch = { $in: filter.branches };
+	if (filter.languages?.length) match.language = { $in: filter.languages };
+	if (filter.editors?.length) match.editor = { $in: filter.editors };
+	if (filter.categories?.length) match.category = { $in: filter.categories };
+	return match;
 }
 
 const fromRollup = (rollup: IDailySummaryZodSchema): DayTotals => ({
@@ -93,7 +114,7 @@ export async function loadDayTotals(
 	if (!dates.length) return result;
 
 	const today = todayIn(settings.timezone);
-	const cacheable = !filter.project && !filter.branches?.length;
+	const cacheable = !isFiltered(filter);
 	const rollupKey = {
 		userId,
 		timezone: settings.timezone,

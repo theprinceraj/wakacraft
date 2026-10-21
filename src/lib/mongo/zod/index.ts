@@ -13,6 +13,13 @@ export {
 	type IPartialDailySummaryZodSchema,
 } from './daily-summary.dto';
 export {
+	GoalZodSchema,
+	type IGoalZodSchema,
+	type IGoalZodSchemaInput,
+	PartialGoalZodSchema,
+	type IPartialGoalZodSchema,
+} from './goal.dto';
+export {
 	HeartbeatZodSchema,
 	type IHeartbeatZodSchema,
 	type IHeartbeatZodSchemaInput,
