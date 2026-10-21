@@ -1,4 +1,5 @@
 import { FolderGit2 } from 'lucide-react';
+import Link from 'next/link';
 import { Suspense } from 'react';
 
 import { Panel, PanelEmpty } from '@/components/dashboard/panel';
@@ -48,10 +49,17 @@ async function Projects() {
 							{projects.map((project) => (
 								<tr key={project.id} className="hover:bg-accent/40">
 									<td className="px-3.5 py-2.5">
-										<span className="flex items-center gap-2">
-											<FolderGit2 className="size-3.5 text-muted-foreground" aria-hidden />
+										<Link
+											href={`/projects/${encodeURIComponent(project.name)}`}
+											className="flex items-center gap-2 hover:text-ember"
+										>
+											<FolderGit2
+												className="size-3.5 text-muted-foreground"
+												style={project.color ? { color: project.color } : undefined}
+												aria-hidden
+											/>
 											<span className="truncate">{project.name}</span>
-										</span>
+										</Link>
 									</td>
 									<td className="tabular px-3.5 py-2.5 text-xs">{formatDuration(recent.get(project.name) ?? 0)}</td>
 									<td className="tabular hidden px-3.5 py-2.5 text-xs text-muted-foreground sm:table-cell">
