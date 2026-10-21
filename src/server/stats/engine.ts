@@ -156,6 +156,24 @@ export interface DayTotals {
 	dependencies: StatTotal[];
 	branches: StatTotal[];
 	entities: StatTotal[];
+	/** Credited seconds per local hour of day (24 entries); zeros when no clock was supplied. */
+	hours: number[];
+}
+
+/** Local wall-clock position of an instant: which hour it falls in and how far into that hour it is. */
+export type LocalClock = (epochSeconds: number) => { hour: number; secondsIntoHour: number };
+
+/** Adds `seconds` starting at `start` into per-hour buckets, splitting at local hour boundaries. */
+function addToHours(hours: number[], start: number, seconds: number, clock: LocalClock) {
+	let time = start;
+	let remaining = seconds;
+	while (remaining > 0) {
+		const { hour, secondsIntoHour } = clock(time);
+		const chunk = Math.min(remaining, 3600 - secondsIntoHour);
+		hours[hour] += chunk;
+		time += chunk;
+		remaining -= chunk;
+	}
 }
 
 class Tally {
@@ -181,8 +199,12 @@ class Tally {
 }
 
 /** Totals for one range (typically one local day), broken down by every summary dimension. */
-export function computeTotals(heartbeats: readonly EngineHeartbeat[], options: CreditOptions): DayTotals {
+export function computeTotals(
+	heartbeats: readonly EngineHeartbeat[],
+	options: CreditOptions & { clock?: LocalClock },
+): DayTotals {
 	const credits = creditSeconds(heartbeats, options);
+	const hours = Array.from({ length: 24 }, () => 0);
 	const tallies = {
 		projects: new Tally(),
 		languages: new Tally(),
@@ -208,6 +230,7 @@ export function computeTotals(heartbeats: readonly EngineHeartbeat[], options: C
 		const seconds = credits[index];
 
 		totals.totalSeconds += seconds;
+		if (options.clock && seconds > 0) addToHours(hours, heartbeat.time, seconds, options.clock);
 		totals.aiLineChanges += heartbeat.aiLineChanges ?? 0;
 		totals.humanLineChanges += heartbeat.humanLineChanges ?? 0;
 		totals.aiInputTokens += heartbeat.aiInputTokens ?? 0;
@@ -238,8 +261,13 @@ export function computeTotals(heartbeats: readonly EngineHeartbeat[], options: C
 		dependencies: tallies.dependencies.sorted(),
 		branches: tallies.branches.sorted(),
 		entities: tallies.entities.sorted(),
+		hours,
 	};
 }
+
+/** Element-wise sum of per-hour arrays. */
+export const mergeHours = (lists: readonly (readonly number[])[]) =>
+	Array.from({ length: 24 }, (_, hour) => lists.reduce((sum, list) => sum + (list[hour] ?? 0), 0));
 
 /** Adds several days' stat rows together by name (for ranges, stats and insights). */
 export function mergeStatTotals(lists: readonly (readonly StatTotal[])[]): StatTotal[] {

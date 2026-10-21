@@ -41,6 +41,10 @@ export const DailySummarySchema = new Schema<IDailySummaryZodSchema>(
 		categories: { type: [statItemSchema], required: true },
 		machines: { type: [statItemSchema], required: true },
 		dependencies: { type: [statItemSchema], required: true },
+		/** Seconds per local hour of day, 24 entries. */
+		hours: { type: [SchemaTypes.Number], required: false, default: undefined },
+		/** Format version of this rollup; rollups from another version are recomputed (see ROLLUP_VERSION). */
+		version: { type: SchemaTypes.Number, required: false },
 	},
 	{ timestamps: true, versionKey: false },
 );

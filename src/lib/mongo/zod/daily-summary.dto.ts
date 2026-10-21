@@ -74,6 +74,8 @@ export const DailySummaryZodSchema = z.object({
 			humanLineChanges: z.number().default(0),
 		}),
 	),
+	hours: z.array(z.number()).optional(),
+	version: z.number().nullish(),
 	createdAt: z
 		.union([z.date(), z.iso.datetime({ offset: true })])
 		.pipe(z.coerce.date())

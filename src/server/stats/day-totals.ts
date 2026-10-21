@@ -1,6 +1,6 @@
 import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
-import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
+import { addDays, localClock, localDayBounds, todayIn } from '@/lib/util/Time';
 
 import { computeTotals, type DayTotals, type EngineHeartbeat } from './engine';
 
@@ -56,6 +56,7 @@ export const emptyTotals = (): DayTotals => ({
 	dependencies: [],
 	branches: [],
 	entities: [],
+	hours: Array.from({ length: 24 }, () => 0),
 });
 
 export function heartbeatFilter(settings: StatsSettings, filter: StatsFilter): Record<string, unknown> {
@@ -85,7 +86,17 @@ const fromRollup = (rollup: IDailySummaryZodSchema): DayTotals => ({
 	categories: rollup.categories,
 	machines: rollup.machines,
 	dependencies: rollup.dependencies,
+	hours: rollup.hours!,
 });
+
+/**
+ * Bump whenever what a rollup stores, or how the engine computes it, changes. Rollups with any other version are
+ * treated as cache misses and rebuilt, so a deploy never serves totals computed by older code.
+ * 2: per-hour totals.
+ */
+export const ROLLUP_VERSION = 2;
+
+const isCurrentRollup = (rollup: IDailySummaryZodSchema) => rollup.version === ROLLUP_VERSION;
 
 /** Splits a sorted date list into runs of consecutive days, so each run costs one heartbeat query. */
 function contiguousRuns(dates: string[]): string[][] {
@@ -127,12 +138,13 @@ export async function loadDayTotals(
 			...rollupKey,
 			date: { $in: dates.filter((d) => d < today) },
 		});
-		for (const rollup of rollups) result.set(rollup.date, fromRollup(rollup));
+		for (const rollup of rollups) if (isCurrentRollup(rollup)) result.set(rollup.date, fromRollup(rollup));
 	}
 
 	const missing = dates.filter((date) => !result.has(date));
 	const extraFilter = heartbeatFilter(settings, filter);
 	const timeoutSeconds = settings.timeoutMinutes * 60;
+	const clock = localClock(settings.timezone);
 	const toStore: { date: string; totals: DayTotals }[] = [];
 
 	await Promise.all(
@@ -156,6 +168,7 @@ export async function loadDayTotals(
 					timeoutSeconds,
 					rangeEnd: end,
 					nextAfterRange: heartbeats[cursor] ?? afterRun,
+					clock,
 				});
 				result.set(date, totals);
 				if (cacheable && date < today) toStore.push({ date, totals });
@@ -170,7 +183,7 @@ export async function loadDayTotals(
 				return mongoDailySummaryService
 					.updateOne(
 						{ ...rollupKey, date },
-						{ $set: stored, $setOnInsert: { ...rollupKey, date } },
+						{ $set: { ...stored, version: ROLLUP_VERSION }, $setOnInsert: { ...rollupKey, date } },
 						{ upsert: true, setDefaultsOnInsert: true },
 					)
 					.catch((error: unknown) => console.warn('Failed to cache daily summary', error));

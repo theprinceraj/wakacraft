@@ -12,7 +12,7 @@ import {
 import { userProfileService } from '@/server/user/user-profile.service';
 
 import { emptyTotals, heartbeatFilter, loadDayTotals, type StatsSettings } from './day-totals';
-import { computeDurations, mergeStatTotals, type DayTotals, type EngineHeartbeat } from './engine';
+import { computeDurations, mergeHours, mergeStatTotals, type DayTotals, type EngineHeartbeat } from './engine';
 import { resolveStatsRange, resolveSummaryRange } from './ranges';
 import {
 	dailyAverage,
@@ -263,6 +263,7 @@ export function sumTotals(days: readonly DayTotals[]): DayTotals {
 		dependencies: mergeStatTotals(days.map((day) => day.dependencies)),
 		branches: mergeStatTotals(days.map((day) => day.branches)),
 		entities: mergeStatTotals(days.map((day) => day.entities)),
+		hours: mergeHours(days.map((day) => day.hours)),
 	};
 }
 

@@ -147,6 +147,17 @@ describe('computeTotals', () => {
 		expect(totals.projects[0]).toMatchObject({ name: 'api', aiLineChanges: 15, humanLineChanges: 9 });
 	});
 
+	it('splits credited time across local hour boundaries', () => {
+		// UTC clock; 10:55 → 11:05 is 5 minutes in hour 10 and 5 in hour 11.
+		const clock = (time: number) => ({ hour: Math.floor((time % 86_400) / 3600), secondsIntoHour: time % 3600 });
+		const at = (hour: number, minute: number) => hour * 3600 + minute * 60;
+		const totals = computeTotals([hb(at(10, 55)), hb(at(11, 5))], { timeoutSeconds: TIMEOUT, rangeEnd: 86_400, clock });
+
+		expect(totals.hours[10]).toBe(300);
+		expect(totals.hours[11]).toBe(300);
+		expect(totals.hours.reduce((sum, seconds) => sum + seconds, 0)).toBe(totals.totalSeconds);
+	});
+
 	it('returns empty breakdowns for no heartbeats', () => {
 		const totals = computeTotals([], { timeoutSeconds: TIMEOUT, rangeEnd: 10 });
 		expect(totals.totalSeconds).toBe(0);

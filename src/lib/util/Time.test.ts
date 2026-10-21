@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { addDays, eachDate, humanizeSeconds, localDateOf, localDayBounds, toHumanDuration, weekdayOf } from './Time';
+import {
+	addDays,
+	eachDate,
+	humanizeSeconds,
+	localClock,
+	localDateOf,
+	localDayBounds,
+	toHumanDuration,
+	weekdayOf,
+} from './Time';
 
 describe('humanizeSeconds', () => {
 	it.each([
@@ -58,6 +67,12 @@ describe('timezones', () => {
 		const { start, end } = localDayBounds('2026-10-22', 'Asia/Kolkata');
 		expect(new Date(start * 1000).toISOString()).toBe('2026-10-21T18:30:00.000Z');
 		expect(end - start).toBe(86_400);
+	});
+
+	it('reads the local clock, including half-hour offsets', () => {
+		const clock = localClock('Asia/Kolkata');
+		// 2026-10-22T04:45:30Z is 10:15:30 in India.
+		expect(clock(Date.UTC(2026, 9, 22, 4, 45, 30) / 1000)).toEqual({ hour: 10, secondsIntoHour: 15 * 60 + 30 });
 	});
 
 	it('handles a 25-hour DST fall-back day', () => {

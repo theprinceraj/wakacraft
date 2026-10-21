@@ -6,16 +6,23 @@ import { useTransition } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 
-const OPTIONS = [
+const DASHBOARD_OPTIONS = [
 	{ value: 'today', label: '1D' },
 	{ value: '7d', label: '7D' },
 	{ value: '14d', label: '14D' },
 	{ value: '30d', label: '30D' },
 	{ value: 'week', label: 'Week' },
 	{ value: 'month', label: 'Month' },
-] as const;
+];
 
-export function RangePicker({ value }: { value: string }) {
+/** Segmented range switch that writes `?range=` and re-renders the server page. */
+export function RangePicker({
+	value,
+	options = DASHBOARD_OPTIONS,
+}: {
+	value: string;
+	options?: readonly { value: string; label: string }[];
+}) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
@@ -34,7 +41,7 @@ export function RangePicker({ value }: { value: string }) {
 			className={cn('rounded-md border bg-card/60 p-0.5 transition-opacity', pending && 'opacity-60')}
 			aria-label="Date range"
 		>
-			{OPTIONS.map((option) => (
+			{options.map((option) => (
 				<ToggleGroupItem
 					key={option.value}
 					value={option.value}

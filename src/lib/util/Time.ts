@@ -72,6 +72,31 @@ export function localDateOf(epochSeconds: number, timezone: string): string {
 	return formatter.format(new Date(epochSeconds * 1000));
 }
 
+const clockFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/** A function giving the local hour of an instant in `timezone`, and how many seconds into that hour it is. */
+export function localClock(timezone: string) {
+	let formatter = clockFormatters.get(timezone);
+	if (!formatter) {
+		formatter = new Intl.DateTimeFormat('en-US', {
+			timeZone: timezone,
+			hourCycle: 'h23',
+			hour: 'numeric',
+			minute: 'numeric',
+			second: 'numeric',
+		});
+		clockFormatters.set(timezone, formatter);
+	}
+	const format = formatter;
+
+	return (epochSeconds: number) => {
+		const parts = format.formatToParts(new Date(epochSeconds * 1000));
+		const value = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+		const fraction = epochSeconds - Math.floor(epochSeconds);
+		return { hour: value('hour'), secondsIntoHour: value('minute') * 60 + value('second') + fraction };
+	};
+}
+
 /** Epoch seconds of local midnight that starts `date` (YYYY-MM-DD) in `timezone`. */
 export function startOfLocalDay(date: string, timezone: string): number {
 	const [year, month, day] = date.split('-').map(Number);
