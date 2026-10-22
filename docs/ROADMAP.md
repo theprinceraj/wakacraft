@@ -14,9 +14,11 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 - [x] **Goals** — `goals`, `goals/:goal` (daily/weekly, at least/at most, project/language/editor/category filters,
       ignored weekdays and zero days, streaks, 14-day / 8-week history)
 - [x] **Insights** — `insights/:type/:range` (all WakaTime types + `hours` time-of-day) and an Insights page
-- [ ] **Custom rules** — rename/merge projects, remap languages by path pattern; re-apply to history
-- [ ] **Import from WakaTime** — upload WakaTime's data export so users bring their history
-- [ ] **Data export** — `data_dumps` (heartbeats / daily JSON)
+- [x] **Custom rules** — `custom_rules` + `custom_rules_progress`; applied at ingestion and to history in the
+      background; editor in Settings
+- [x] **Import from WakaTime** — heartbeats export uploaded in batches from the browser; re-runs are deduplicated
+- [x] **Data export** — `data_dumps` (heartbeats / daily JSON), streamed on download
+- [ ] **Import via WakaTime API key** — pull history directly from wakatime.com without a file (resumable job)
 - [ ] **Email**: verification, password reset (Better Auth needs a mail transport, e.g. Resend)
 
 ## Phase 6: social & sharing
