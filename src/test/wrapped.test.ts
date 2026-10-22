@@ -27,7 +27,9 @@ const run = (date: string, minutes: number, language: string) =>
 
 beforeAll(async () => {
 	await connectMongo();
-	({ user: { id: userId } } = await signUpTestUser({ body: { email: 'wrapped@wakacraft.test', name: 'Wrapper' } }));
+	({
+		user: { id: userId },
+	} = await signUpTestUser({ body: { email: 'wrapped@wakacraft.test', name: 'Wrapper' } }));
 	await userProfileService.updateSettings(userId, { timezone: 'UTC' });
 	await importService.importBatch(userId, {
 		heartbeats: [...run(days[0], 30, 'Rust'), ...run(days[1], 60, 'Rust'), ...run(lastYearDay, 20, 'Perl')],

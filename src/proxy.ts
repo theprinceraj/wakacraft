@@ -1,7 +1,16 @@
 import { getSessionCookie } from 'better-auth/cookies';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const APP_PATHS = ['/dashboard', '/projects', '/goals', '/insights', '/leaderboards', '/wrapped', '/settings'];
+const APP_PATHS = [
+	'/dashboard',
+	'/projects',
+	'/goals',
+	'/insights',
+	'/leaderboards',
+	'/wrapped',
+	'/invoices',
+	'/settings',
+];
 
 const CORS_HEADERS = {
 	'Access-Control-Allow-Origin': '*',
@@ -44,6 +53,7 @@ export const config = {
 		'/insights/:path*',
 		'/leaderboards/:path*',
 		'/wrapped/:path*',
+		'/invoices/:path*',
 		'/settings/:path*',
 	],
 };

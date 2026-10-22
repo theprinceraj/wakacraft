@@ -31,7 +31,7 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 ## Phase 7: teams & business
 
 - [ ] Organizations, dashboards, members (`orgs/*` endpoints), roles
-- [ ] Invoices — clients, hourly rates, billable time per project
+- [x] Invoices: clients with hourly rates, rounding and projects; frozen, numbered, printable invoices with status
 - [x] External durations (`external_durations`, `.bulk`): meetings and other non-editor time, merged into all stats without double counting
 - [ ] Commits (`projects/:project/commits`) with a GitHub/GitLab integration
 - [ ] OAuth 2 apps with scopes (`read_stats`, `read_summaries`, …) for third-party clients

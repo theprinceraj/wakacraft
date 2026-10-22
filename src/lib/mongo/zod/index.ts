@@ -6,6 +6,13 @@ export {
 	type IPartialApiKeyZodSchema,
 } from './api-key.dto';
 export {
+	ClientZodSchema,
+	type IClientZodSchema,
+	type IClientZodSchemaInput,
+	PartialClientZodSchema,
+	type IPartialClientZodSchema,
+} from './client.dto';
+export {
 	CustomRuleZodSchema,
 	type ICustomRuleZodSchema,
 	type ICustomRuleZodSchemaInput,
@@ -47,6 +54,13 @@ export {
 	PartialHeartbeatZodSchema,
 	type IPartialHeartbeatZodSchema,
 } from './heartbeat.dto';
+export {
+	InvoiceZodSchema,
+	type IInvoiceZodSchema,
+	type IInvoiceZodSchemaInput,
+	PartialInvoiceZodSchema,
+	type IPartialInvoiceZodSchema,
+} from './invoice.dto';
 export {
 	LeaderboardCacheZodSchema,
 	type ILeaderboardCacheZodSchema,
