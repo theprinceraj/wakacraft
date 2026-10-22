@@ -3,7 +3,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GET as downloadDump } from '@/app/api/v1/users/[user]/data_dumps/[id]/download/route';
 import { GET as listDumps, POST as createDump } from '@/app/api/v1/users/[user]/data_dumps/route';
 import { POST as postBulk } from '@/app/api/v1/users/[user]/heartbeats.bulk/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
 import { apiKeyService } from '@/server/api-key/api-key.service';
@@ -12,6 +11,7 @@ import { importService } from '@/server/import/import.service';
 import { statsService } from '@/server/stats/stats.service';
 
 import { basicAuth, call, CLI_USER_AGENT } from './api';
+import { signUpTestUser } from './users';
 
 const recentDay = addDays(todayIn('UTC'), -2);
 const oldDay = addDays(todayIn('UTC'), -500);
@@ -20,7 +20,7 @@ let source: { id: string; key: string };
 let target: { id: string };
 
 const signUp = async (email: string) => {
-	const { user } = await auth.api.signUpEmail({ body: { email, password: 'correct-horse-battery', name: email } });
+	const { user } = await signUpTestUser({ body: { email, password: 'correct-horse-battery', name: email } });
 	return user.id;
 };
 

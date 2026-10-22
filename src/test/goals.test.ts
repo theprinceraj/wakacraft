@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { GET as getGoal } from '@/app/api/v1/users/[user]/goals/[goal]/route';
 import { GET as listGoals } from '@/app/api/v1/users/[user]/goals/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
 import { apiKeyService } from '@/server/api-key/api-key.service';
@@ -11,6 +10,7 @@ import { goalService } from '@/server/goal/goal.service';
 import { heartbeatService } from '@/server/heartbeat/heartbeat.service';
 
 import { basicAuth, call } from './api';
+import { signUpTestUser } from './users';
 
 const yesterday = addDays(todayIn('UTC'), -1);
 const t0 = localDayBounds(yesterday, 'UTC').start + 9 * 3600;
@@ -20,7 +20,7 @@ let apiKey: string;
 
 beforeAll(async () => {
 	await connectMongo();
-	const { user } = await auth.api.signUpEmail({
+	const { user } = await signUpTestUser({
 		body: { email: 'goals@wakacraft.test', password: 'correct-horse-battery', name: 'Goal Setter' },
 	});
 	userId = user.id;

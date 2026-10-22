@@ -24,7 +24,7 @@ export default function HomePage() {
 						<Link href="/login">Sign in</Link>
 					</Button>
 					<Button asChild>
-						<Link href="/signup">Get started</Link>
+						<Link href="/login">Get started</Link>
 					</Button>
 				</div>
 			</header>
@@ -42,7 +42,7 @@ export default function HomePage() {
 					</p>
 					<div className="mt-8 flex gap-3">
 						<Button size="lg" asChild>
-							<Link href="/signup">Start tracking free</Link>
+							<Link href="/login">Start tracking free</Link>
 						</Button>
 					</div>
 				</div>

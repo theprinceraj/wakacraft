@@ -19,7 +19,7 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 - [x] **Import from WakaTime** — heartbeats export uploaded in batches from the browser; re-runs are deduplicated
 - [x] **Data export** — `data_dumps` (heartbeats / daily JSON), streamed on download
 - [ ] **Import via WakaTime API key** — pull history directly from wakatime.com without a file (resumable job)
-- [ ] **Email**: verification, password reset (Better Auth needs a mail transport, e.g. Resend)
+- [x] **OAuth-only sign-in** (GitHub; Google when configured) — no passwords, so no email service is needed
 
 ## Phase 6: social & sharing
 
@@ -32,7 +32,6 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 
 - [ ] Organizations, dashboards, members (`orgs/*` endpoints), roles
 - [ ] Invoices — clients, hourly rates, billable time per project
-- [ ] Weekly email reports
 - [ ] External durations (`external_durations`, `.bulk`) — meetings, calendar imports
 - [ ] Commits (`projects/:project/commits`) with a GitHub/GitLab integration
 - [ ] OAuth 2 apps with scopes (`read_stats`, `read_summaries`, …) for third-party clients

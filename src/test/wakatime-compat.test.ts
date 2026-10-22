@@ -10,7 +10,6 @@ import { GET as getUser } from '@/app/api/v1/users/[user]/route';
 import { GET as getStats } from '@/app/api/v1/users/[user]/stats/[range]/route';
 import { GET as getStatusBar } from '@/app/api/v1/users/[user]/statusbar/today/route';
 import { GET as getSummaries } from '@/app/api/v1/users/[user]/summaries/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
@@ -18,6 +17,7 @@ import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
 import { apiKeyService } from '@/server/api-key/api-key.service';
 
 import { basicAuth, call, CLI_USER_AGENT } from './api';
+import { signUpTestUser } from './users';
 
 const cliHeaders = (apiKey: string) => ({
 	...basicAuth(apiKey),
@@ -50,7 +50,7 @@ let apiKey: string;
 
 beforeAll(async () => {
 	await connectMongo();
-	const { user } = await auth.api.signUpEmail({
+	const { user } = await signUpTestUser({
 		body: { email: 'dev@wakacraft.test', password: 'correct-horse-battery', name: 'Dev' },
 	});
 	userId = user.id;

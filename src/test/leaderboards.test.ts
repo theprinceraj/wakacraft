@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { GET as getLeaders } from '@/app/api/v1/leaders/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { mongoLeaderboardCacheService } from '@/lib/mongo/leaderboard-cache/leaderboard-cache.service';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
@@ -10,12 +9,13 @@ import { leaderboardService } from '@/server/leaderboard/leaderboard.service';
 import { userProfileService } from '@/server/user/user-profile.service';
 
 import { call } from './api';
+import { signUpTestUser } from './users';
 
 const day = addDays(todayIn('UTC'), -1);
 const ids: Record<string, string> = {};
 
 async function makeUser(name: string, minutes: number, language: string, settings: Record<string, unknown>) {
-	const { user } = await auth.api.signUpEmail({
+	const { user } = await signUpTestUser({
 		body: { email: `${name}@lb.wakacraft.test`, password: 'correct-horse-battery', name },
 	});
 	await userProfileService.updateSettings(user.id, { username: name, timezone: 'UTC', ...settings });

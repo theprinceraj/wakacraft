@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { GET as getInsight } from '@/app/api/v1/users/[user]/insights/[insight_type]/[range]/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
 import { addDays, localDayBounds, todayIn, weekdayOf } from '@/lib/util/Time';
@@ -10,6 +9,7 @@ import { heartbeatService } from '@/server/heartbeat/heartbeat.service';
 import { ROLLUP_VERSION } from '@/server/stats/day-totals';
 
 import { basicAuth, call } from './api';
+import { signUpTestUser } from './users';
 
 const today = todayIn('UTC');
 const dayA = addDays(today, -1);
@@ -27,7 +27,7 @@ const insight = (type: string, range = 'last_7_days', query = '') =>
 
 beforeAll(async () => {
 	await connectMongo();
-	const { user } = await auth.api.signUpEmail({
+	const { user } = await signUpTestUser({
 		body: { email: 'insights@wakacraft.test', password: 'correct-horse-battery', name: 'Insightful' },
 	});
 	userId = user.id;

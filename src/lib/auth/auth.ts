@@ -31,7 +31,8 @@ export const auth = betterAuth({
 		// Standalone mongod (local dev) has no transactions; Atlas does.
 		transaction: process.env.MONGODB_TRANSACTIONS === 'true',
 	}),
-	emailAndPassword: { enabled: true, minPasswordLength: 8 },
+	// OAuth only (GitHub, Google): no passwords to store and no email service needed for verification or resets.
+	emailAndPassword: { enabled: false },
 	socialProviders,
 	account: { accountLinking: { enabled: true, trustedProviders: ['github', 'google'] } },
 	session: { cookieCache: { enabled: true, maxAge: 5 * 60 } },

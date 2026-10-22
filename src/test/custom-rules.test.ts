@@ -3,13 +3,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GET as getProgress } from '@/app/api/v1/users/[user]/custom_rules_progress/route';
 import { GET as listRules, PUT as putRules } from '@/app/api/v1/users/[user]/custom_rules/route';
 import { POST as postBulk } from '@/app/api/v1/users/[user]/heartbeats.bulk/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { mongoProjectService } from '@/lib/mongo/project/project.service';
 import { apiKeyService } from '@/server/api-key/api-key.service';
 
 import { basicAuth, call } from './api';
+import { signUpTestUser } from './users';
 
 let userId: string;
 let apiKey: string;
@@ -41,7 +41,7 @@ async function waitForJob(jobId: string) {
 
 beforeAll(async () => {
 	await connectMongo();
-	const { user } = await auth.api.signUpEmail({
+	const { user } = await signUpTestUser({
 		body: { email: 'rules@wakacraft.test', password: 'correct-horse-battery', name: 'Rule Maker' },
 	});
 	userId = user.id;

@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { GET as getStats } from '@/app/api/v1/users/[user]/stats/[range]/route';
 import { GET as getUser } from '@/app/api/v1/users/[user]/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { mongoProjectService } from '@/lib/mongo/project/project.service';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
@@ -11,11 +10,12 @@ import { heartbeatService } from '@/server/heartbeat/heartbeat.service';
 import { userProfileService } from '@/server/user/user-profile.service';
 
 import { basicAuth, call, CLI_USER_AGENT } from './api';
+import { signUpTestUser } from './users';
 
 const day = addDays(todayIn('UTC'), -1);
 
 async function makeUser(username: string, settings: Parameters<typeof userProfileService.updateSettings>[1]) {
-	const { user } = await auth.api.signUpEmail({
+	const { user } = await signUpTestUser({
 		body: { email: `${username}@wakacraft.test`, password: 'correct-horse-battery', name: username },
 	});
 	await userProfileService.updateSettings(user.id, { username, timezone: 'UTC', ...settings });

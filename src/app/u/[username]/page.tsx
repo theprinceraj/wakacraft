@@ -32,7 +32,7 @@ export default function PublicProfilePage({ params }: PageProps<'/u/[username]'>
 				<Link href="/" className="text-foreground">
 					<Logo />
 				</Link>
-				<Link href="/signup" className="text-xs text-muted-foreground hover:text-foreground">
+				<Link href="/login" className="text-xs text-muted-foreground hover:text-foreground">
 					Track your own coding time →
 				</Link>
 			</header>

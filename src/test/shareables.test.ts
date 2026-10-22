@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { signUpTestUser } from './users';
 
 import { GET as getBadge } from '@/app/api/v1/users/[user]/badges/projects/[project]/route';
 import { GET as getShare } from '@/app/share/[username]/[chart]/route';
-import { auth } from '@/lib/auth/auth';
 import { connectMongo } from '@/lib/mongo/connection';
 import { mongoProjectService } from '@/lib/mongo/project/project.service';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
@@ -21,7 +21,7 @@ async function fetchRoute(handler: typeof getBadge, path: string, params: Record
 }
 
 async function makeUser(username: string, settings: Record<string, unknown>) {
-	const { user } = await auth.api.signUpEmail({
+	const { user } = await signUpTestUser({
 		body: { email: `${username}@share.wakacraft.test`, password: 'correct-horse-battery', name: username },
 	});
 	await userProfileService.updateSettings(user.id, { username, timezone: 'UTC', ...settings });
