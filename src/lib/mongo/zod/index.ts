@@ -90,6 +90,27 @@ export {
 	type IPartialMachineZodSchema,
 } from './machine.dto';
 export {
+	OrgDashboardZodSchema,
+	type IOrgDashboardZodSchema,
+	type IOrgDashboardZodSchemaInput,
+	PartialOrgDashboardZodSchema,
+	type IPartialOrgDashboardZodSchema,
+} from './org-dashboard.dto';
+export {
+	OrgMemberZodSchema,
+	type IOrgMemberZodSchema,
+	type IOrgMemberZodSchemaInput,
+	PartialOrgMemberZodSchema,
+	type IPartialOrgMemberZodSchema,
+} from './org-member.dto';
+export {
+	OrgZodSchema,
+	type IOrgZodSchema,
+	type IOrgZodSchemaInput,
+	PartialOrgZodSchema,
+	type IPartialOrgZodSchema,
+} from './org.dto';
+export {
 	ProjectZodSchema,
 	type IProjectZodSchema,
 	type IProjectZodSchemaInput,

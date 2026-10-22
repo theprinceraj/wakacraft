@@ -12,7 +12,7 @@ import {
 import { userProfileService } from '@/server/user/user-profile.service';
 import { firstActivityAtOrAfter, loadActivity } from './activity-stream';
 
-import { emptyTotals, heartbeatFilter, loadDayTotals, type StatsSettings } from './day-totals';
+import { emptyTotals, heartbeatFilter, loadDayTotals, type StatsFilter, type StatsSettings } from './day-totals';
 import { computeDurations, mergeHours, mergeStatTotals, type DayTotals } from './engine';
 import { resolveStatsRange, resolveSummaryRange } from './ranges';
 import {
@@ -48,7 +48,12 @@ class StatsService {
 		};
 	}
 
-	public async getSummaries(userId: string, query: SummariesQuery): Promise<SummariesResponse> {
+	/** `scope` narrows further, e.g. to an org dashboard's projects; the query's own filters apply within it. */
+	public async getSummaries(
+		userId: string,
+		query: SummariesQuery,
+		scope: StatsFilter = {},
+	): Promise<SummariesResponse> {
 		const settings = await this.resolveSettings(userId, query);
 		const today = todayIn(settings.timezone);
 		const range = query.range
@@ -56,7 +61,7 @@ class StatsService {
 			: { start: query.start!, end: query.end!, text: '' };
 
 		const dates = eachDate(range.start, range.end);
-		const filter = { project: query.project, branches: query.branches };
+		const filter = { ...scope, project: query.project, branches: query.branches };
 		const totals = await loadDayTotals(userId, dates, settings, filter);
 		const days = dates.map((date) => totals.get(date)!);
 
@@ -94,10 +99,14 @@ class StatsService {
 		};
 	}
 
-	public async getDurations(userId: string, query: DurationsQuery): Promise<DurationsResponse> {
+	public async getDurations(
+		userId: string,
+		query: DurationsQuery,
+		scope: StatsFilter = {},
+	): Promise<DurationsResponse> {
 		const settings = await this.resolveSettings(userId, query);
 		const { start, end } = localDayBounds(query.date, settings.timezone);
-		const extraFilter = heartbeatFilter(settings, { project: query.project, branches: query.branches });
+		const extraFilter = heartbeatFilter(settings, { ...scope, project: query.project, branches: query.branches });
 
 		const [heartbeats, after, projects] = await Promise.all([
 			loadActivity(userId, start, end, extraFilter),

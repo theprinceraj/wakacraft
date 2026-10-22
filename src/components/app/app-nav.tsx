@@ -10,6 +10,7 @@ import {
 	Sparkles,
 	Target,
 	Trophy,
+	Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -34,6 +35,7 @@ const LINKS = [
 	{ href: '/goals', label: 'Goals', icon: Target },
 	{ href: '/insights', label: 'Insights', icon: Lightbulb },
 	{ href: '/leaderboards', label: 'Leaderboards', icon: Trophy },
+	{ href: '/orgs', label: 'Teams', icon: Users },
 	{ href: '/invoices', label: 'Invoices', icon: Receipt },
 	{ href: '/wrapped', label: 'Wrapped', icon: Sparkles },
 	{ href: '/settings', label: 'Settings', icon: Settings },

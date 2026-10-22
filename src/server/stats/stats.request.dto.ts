@@ -6,7 +6,7 @@ import { isValidTimezone } from '@/lib/util/Time';
 import { StatsRangePattern, SummaryRangeNames } from './ranges';
 
 /** Accepts `2026-10-22` or a full ISO timestamp (WakaTime clients send both) and keeps the date part. */
-const dateParam = z.preprocess(
+export const dateParam = z.preprocess(
 	(value) => (typeof value === 'string' && value.length > 10 ? value.slice(0, 10) : value),
 	z.iso.date(),
 );

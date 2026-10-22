@@ -61,7 +61,12 @@ export const emptyTotals = (): DayTotals => ({
 
 export function heartbeatFilter(settings: StatsSettings, filter: StatsFilter): Record<string, unknown> {
 	const match: Record<string, unknown> = settings.writesOnly ? { isWrite: true } : {};
-	const project = filter.project ? filter.project : anyOf(filter.projects);
+	// A single project inside a project allow-list (an org dashboard's scope) must not escape that list.
+	const project = filter.project
+		? filter.projects?.length && !filter.projects.includes(filter.project)
+			? { $in: [] }
+			: filter.project
+		: anyOf(filter.projects);
 	if (project) match.project = project;
 	if (filter.branches?.length) match.branch = { $in: filter.branches };
 	if (filter.languages?.length) match.language = { $in: filter.languages };

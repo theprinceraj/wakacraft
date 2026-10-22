@@ -30,7 +30,8 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 
 ## Phase 7: teams & business
 
-- [ ] Organizations, dashboards, members (`orgs/*` endpoints), roles
+- [x] Organizations (`users/:user/orgs/*`): invite links, owner/admin/member roles, dashboards scoped to members and
+      projects, team summaries, member summaries and durations
 - [x] Invoices: clients with hourly rates, rounding and projects; frozen, numbered, printable invoices with status
 - [x] External durations (`external_durations`, `.bulk`): meetings and other non-editor time, merged into all stats without double counting
 - [ ] Commits (`projects/:project/commits`) with a GitHub/GitLab integration

@@ -5,6 +5,7 @@ import { mongoLeaderboardCacheService } from '@/lib/mongo/leaderboard-cache/lead
 import { mongoLeaderboardMemberService } from '@/lib/mongo/leaderboard-member/leaderboard-member.service';
 import { mongoLeaderboardService } from '@/lib/mongo/leaderboard/leaderboard.service';
 import { mongoUserProfileService } from '@/lib/mongo/user-profile/user-profile.service';
+import { inBatches } from '@/lib/util/Async';
 import { addDays, eachDate, humanizeSeconds, round, todayIn } from '@/lib/util/Time';
 import { loadDayTotals } from '@/server/stats/day-totals';
 import { mergeStatTotals } from '@/server/stats/engine';
@@ -38,14 +39,6 @@ async function weekFor(userId: string): Promise<Entry> {
 			totalSeconds,
 		})),
 	};
-}
-
-async function inBatches<T, R>(items: T[], size: number, task: (item: T) => Promise<R>): Promise<R[]> {
-	const results: R[] = [];
-	for (let index = 0; index < items.length; index += size) {
-		results.push(...(await Promise.all(items.slice(index, index + size).map(task))));
-	}
-	return results;
 }
 
 class LeaderboardService {

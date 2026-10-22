@@ -70,7 +70,7 @@ export interface DashboardView {
 	timeline: { date: string; start: number; end: number; lanes: string[]; blocks: TimelineBlock[] };
 }
 
-const toBreakdown = (items: StatTotal[], total: number): Breakdown[] =>
+export const toBreakdown = (items: StatTotal[], total: number): Breakdown[] =>
 	items
 		.filter((item) => item.totalSeconds > 0)
 		.map((item) => ({
