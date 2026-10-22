@@ -38,6 +38,14 @@ describe('toWireHeartbeat', () => {
 		});
 	});
 
+	it('passes WakaTime heartbeat ids on as source_id, but not other ids', () => {
+		const id = '3f2b8c1e-9a4d-4e6f-8b7a-1c2d3e4f5a6b';
+		expect(toWireHeartbeat({ ...wakatimeHeartbeat, id }, buildLookups([], []))).toMatchObject({ source_id: id });
+		expect(toWireHeartbeat({ ...wakatimeHeartbeat, id: '1180000000000000001' }, buildLookups([], []))).toMatchObject({
+			source_id: undefined,
+		});
+	});
+
 	it('turns nulls into absent fields so defaults apply', () => {
 		const wire = toWireHeartbeat(wakatimeHeartbeat, buildLookups([], [])) as Record<string, unknown>;
 		expect(wire.category).toBeUndefined();

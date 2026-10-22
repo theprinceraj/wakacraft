@@ -4,6 +4,8 @@
  * the strings ingestion parses editor/OS from.
  */
 
+import { z } from 'zod';
+
 export interface ImportLookups {
 	userAgents: Map<string, string>;
 	machines: Map<string, string>;
@@ -16,6 +18,8 @@ const MAX_DEPENDENCIES = 500;
 const MAX_DEPENDENCY_LENGTH = 256;
 
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : undefined);
+/** WakaTime ids are UUIDs; wakacraft's own export ids are snowflakes, which mean nothing outside their instance. */
+const wakatimeId = (value: unknown) => (z.guid().safeParse(value).success ? (value as string) : undefined);
 const integer = (value: unknown) =>
 	typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : undefined;
 
@@ -44,6 +48,7 @@ export function toWireHeartbeat(raw: unknown, lookups: ImportLookups): unknown {
 	const machineId = text(heartbeat.machine_name_id);
 
 	return {
+		source_id: wakatimeId(heartbeat.id),
 		entity: heartbeat.entity,
 		type: heartbeat.type,
 		// WakaTime exports and its heartbeats API title-case categories ("AI Coding"); ingestion takes wakatime-cli's lowercase.

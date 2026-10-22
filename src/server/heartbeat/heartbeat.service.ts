@@ -104,7 +104,7 @@ class HeartbeatService {
 				const userAgentValue = heartbeat.userAgent ?? context.userAgent;
 				const userAgent = userAgentValue ? userAgents.get(userAgentValue) : undefined;
 				const machine = machineOf(heartbeat);
-				const { userAgent: _userAgent, machineName: _machineName, ...fields } = heartbeat;
+				const { userAgent: _userAgent, machineName: _machineName, sourceId: _sourceId, ...fields } = heartbeat;
 				const enriched = {
 					...fields,
 					userId,
