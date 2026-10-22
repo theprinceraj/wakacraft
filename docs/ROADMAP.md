@@ -23,9 +23,9 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 
 ## Phase 6: social & sharing
 
-- [ ] Public profiles (`users/:username`) honouring the `*_public` flags
-- [ ] Public leaderboard (`leaders`) and private leaderboards (`users/current/leaderboards`, invites)
-- [ ] Shareables: embeddable SVG/JSON charts, README badges per project, public project URLs
+- [x] Public profiles at `/@username` (`users/:username`, public `stats`) honouring the `*_public` flags
+- [x] Public leaderboard (`leaders`, language filter) and private leaderboards with invite links
+- [x] Shareables: embeddable SVG/JSON charts (languages, editors, activity; dark/light) and README badges per public project
 - [ ] Wrapped — year in review
 
 ## Phase 7: teams & business
