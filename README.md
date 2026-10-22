@@ -1,7 +1,11 @@
 # wakacraft
 
-Automatic time tracking for developers. wakacraft implements the WakaTime API, so **every WakaTime editor plugin
-works with it unchanged**. Point the plugin at your wakacraft instance and keep coding.
+An open-source alternative to WakaTime: automatic time tracking for developers. wakacraft implements the WakaTime API,
+so **every WakaTime editor plugin works with it unchanged**. Point the plugin at a wakacraft instance and keep coding.
+
+Every feature is free, with nothing behind a paid plan: dashboards, goals, insights, public profiles, leaderboards,
+teams, invoices, and imports of your full history from WakaTime. Use the hosted instance at
+[wakacraft.theprinceraj.in](https://wakacraft.theprinceraj.in) or run your own.
 
 Next.js 16 · TypeScript · MongoDB (Mongoose) · Zod · Better Auth · Tailwind + shadcn/ui
 
@@ -57,3 +61,8 @@ The full feature-parity plan is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 See [AGENTS.md](AGENTS.md) for architecture and conventions. Key commands: `bun run sync` (regenerate zod DTOs after
 a schema change), `bun run test`, `bun run preflight`.
+
+## License
+
+[AGPL-3.0](LICENSE). You can use, self-host and modify wakacraft freely. If you run a modified version as a network
+service, you must publish your changes under the same license.

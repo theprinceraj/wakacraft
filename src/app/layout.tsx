@@ -13,7 +13,8 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 
 export const metadata: Metadata = {
 	title: { default: 'wakacraft', template: '%s · wakacraft' },
-	description: 'Automatic time tracking for developers. Works with every WakaTime editor plugin.',
+	description:
+		'Open-source WakaTime alternative: automatic time tracking for developers that works with every WakaTime editor plugin.',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
