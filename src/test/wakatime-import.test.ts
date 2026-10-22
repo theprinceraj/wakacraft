@@ -5,6 +5,7 @@ import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { mongoWakatimeImportService } from '@/lib/mongo/wakatime-import/wakatime-import.service';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
 import { importService } from '@/server/import/import.service';
+import { statsService } from '@/server/stats/stats.service';
 import { wakatimeImportService } from '@/server/wakatime-import/wakatime-import.service';
 
 import { CLI_USER_AGENT } from './api';
@@ -13,6 +14,7 @@ import { signUpTestUser } from './users';
 import type { IWakatimeImportZodSchema } from '@/lib/mongo/zod';
 
 const GOOD_KEY = 'waka_00000000-0000-4000-8000-000000000001';
+const MACHINE_ID = '7fdd436f-ff0a-45fd-99d3-cdeb0304d4a7';
 const days = [-6, -5, -4].map((offset) => addDays(todayIn('UTC'), offset));
 let userId: string;
 let rateLimitedOnce = false;
@@ -32,7 +34,7 @@ const heartbeatsFor = (date: string, count: number) =>
 		is_write: false,
 		time: localDayBounds(date, 'UTC').start + 10 * 3600 + index * 60,
 		user_agent_id: 'ua-1',
-		machine_name_id: 'm-1',
+		machine_name_id: MACHINE_ID,
 	}));
 
 function fakeWakatime(input: string | URL | Request, init?: RequestInit) {
@@ -49,7 +51,7 @@ function fakeWakatime(input: string | URL | Request, init?: RequestInit) {
 		case '/api/v1/users/current/user_agents':
 			return json({ data: [{ id: 'ua-1', value: CLI_USER_AGENT }] });
 		case '/api/v1/users/current/machine_names':
-			return json({ data: [{ id: 'm-1', name: 'workstation', value: 'workstation' }], total_pages: 1 });
+			return json({ data: [{ id: MACHINE_ID, name: 'workstation', value: 'workstation' }], total_pages: 1 });
 		case '/api/v1/users/current/heartbeats': {
 			const date = url.searchParams.get('date')!;
 			if (alwaysLimited || (date === days[1] && !rateLimitedOnce)) {
@@ -148,9 +150,25 @@ describe('export file and API import together', () => {
 			heartbeats: [...heartbeatsFor(days[0], 11), ...heartbeatsFor(days[1], 6)],
 		});
 		expect(await mongoHeartbeatService.count({ userId: fileUserId })).toBe(17);
+		const [fromFile] = await mongoHeartbeatService.find({ userId: fileUserId }, '', { limit: 1 });
+		expect(fromFile.editor).toBeUndefined();
+		expect(fromFile.machine).toBeUndefined();
+		// Caches the day's rollup without an editor, which the API import must invalidate.
+		await statsService.getSummaries(fileUserId, { start: days[0], end: days[0], timezone: 'UTC' });
 
 		await wakatimeImportService.start(fileUserId, GOOD_KEY);
 		await vi.waitFor(async () => expect((await latest(fileUserId)).status).toBe('done'));
 		expect(await mongoHeartbeatService.count({ userId: fileUserId })).toBe(17);
+	});
+
+	it('fills in the editor and machine the file could not resolve, and refreshes cached totals', async () => {
+		const unfilled = await mongoHeartbeatService.count({ userId: fileUserId, editor: { $exists: false } });
+		expect(unfilled).toBe(0);
+		const heartbeats = await mongoHeartbeatService.find({ userId: fileUserId });
+		expect(heartbeats.every((heartbeat) => heartbeat.machine === 'workstation')).toBe(true);
+
+		const { data } = await statsService.getSummaries(fileUserId, { start: days[0], end: days[0], timezone: 'UTC' });
+		expect(data[0].editors.map((editor: { name: string }) => editor.name)).toEqual(['VS Code']);
+		expect(data[0].machines.map((machine: { name: string }) => machine.name)).toEqual(['workstation']);
 	});
 });

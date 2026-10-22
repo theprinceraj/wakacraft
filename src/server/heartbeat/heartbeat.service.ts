@@ -18,6 +18,11 @@ import { toHeartbeatResponse, type HeartbeatResponse } from './heartbeat.respons
 
 import type { IHeartbeatZodSchema } from '@/lib/mongo/zod';
 
+type StoredCopy = Pick<IHeartbeatZodSchema, 'id' | 'time' | 'userAgentId' | 'machine'>;
+type ImportedCopy = Pick<IHeartbeatZodSchema, 'userAgentId' | 'editor' | 'operatingSystem' | 'machine'> & {
+	dedupHash: string;
+};
+
 export interface IngestContext {
 	/** `User-Agent` header; a heartbeat's own `user_agent` field takes precedence. */
 	userAgent: string | null;
@@ -133,15 +138,16 @@ class HeartbeatService {
 					heartbeat ? [[kept[position].dedupHash, heartbeat.id] as const] : [],
 				),
 			);
-			const existingIds = await this.idsForDuplicates(
+			const existing = await this.storedCopies(
 				userId,
 				kept.filter((doc) => !insertedByHash.has(doc.dedupHash)).map((doc) => doc.dedupHash),
 			);
+			if (context.historical) await this.fillFromImport(userId, kept, existing);
 
 			valid.forEach(({ index, heartbeat }, position) => {
 				const doc = docs[position];
 				// A heartbeat dropped by a delete rule is still acknowledged, so the plugin doesn't retry it forever.
-				const id = doc ? (insertedByHash.get(doc.dedupHash) ?? existingIds.get(doc.dedupHash) ?? '') : '';
+				const id = doc ? (insertedByHash.get(doc.dedupHash) ?? existing.get(doc.dedupHash)?.id ?? '') : '';
 				results[index] = [{ data: { id, entity: heartbeat.entity, type: heartbeat.type, time: heartbeat.time } }, 201];
 			});
 
@@ -169,13 +175,42 @@ class HeartbeatService {
 		await invalidateRollups(userId, [{ from: start, until: end - 1 }]);
 	}
 
-	private async idsForDuplicates(userId: string, hashes: string[]): Promise<Map<string, string>> {
+	/** The already-stored heartbeats behind these dedup hashes, by hash. */
+	private async storedCopies(userId: string, hashes: string[]): Promise<Map<string, StoredCopy>> {
 		if (!hashes.length) return new Map();
-		const existing = (await mongoHeartbeatService.find({ userId, dedupHash: { $in: hashes } }, 'id +dedupHash')) as {
-			id: string;
-			dedupHash: string;
-		}[];
-		return new Map(existing.map((heartbeat) => [heartbeat.dedupHash, heartbeat.id]));
+		const existing = (await mongoHeartbeatService.find(
+			{ userId, dedupHash: { $in: hashes } },
+			'id time userAgentId machine +dedupHash',
+		)) as (StoredCopy & { dedupHash: string })[];
+		return new Map(existing.map((heartbeat) => [heartbeat.dedupHash, heartbeat]));
+	}
+
+	/**
+	 * An import that meets a stored copy fills in the editor and machine the copy lacks: a WakaTime export file can't
+	 * resolve them, the API can, and either may be imported first. Values already stored are never overwritten.
+	 */
+	private async fillFromImport(userId: string, docs: ImportedCopy[], existing: Map<string, StoredCopy>): Promise<void> {
+		const patches = docs.flatMap((doc) => {
+			const copy = existing.get(doc.dedupHash);
+			if (!copy) return [];
+			const patch = Object.fromEntries(
+				Object.entries({
+					...(!copy.userAgentId && doc.userAgentId
+						? { userAgentId: doc.userAgentId, editor: doc.editor, operatingSystem: doc.operatingSystem }
+						: {}),
+					...(!copy.machine && doc.machine ? { machine: doc.machine } : {}),
+				}).filter(([, value]) => value !== undefined && value !== null),
+			);
+			return Object.keys(patch).length ? [{ id: copy.id, time: copy.time, patch }] : [];
+		});
+		if (!patches.length) return;
+
+		await mongoHeartbeatService.patchMany(patches);
+		// Editor and machine are part of the cached day rollups.
+		await invalidateRollups(
+			userId,
+			patches.map(({ time }) => ({ from: time })),
+		);
 	}
 
 	private async afterInsert(userId: string, stored: IHeartbeatZodSchema[]): Promise<void> {
