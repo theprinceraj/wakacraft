@@ -26,7 +26,7 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 - [x] Public profiles at `/@username` (`users/:username`, public `stats`) honouring the `*_public` flags
 - [x] Public leaderboard (`leaders`, language filter) and private leaderboards with invite links
 - [x] Shareables: embeddable SVG/JSON charts (languages, editors, activity; dark/light) and README badges per public project
-- [ ] Wrapped — year in review
+- [x] Wrapped: year in review (totals, streak, best day, busiest month, peak hour, top languages/projects/editors, new languages, vs last year)
 
 ## Phase 7: teams & business
 
