@@ -32,27 +32,36 @@ export type IngestResult =
 	| [{ data: Pick<IHeartbeatZodSchema, 'id' | 'entity' | 'type' | 'time'> }, 201]
 	| [{ error: string; errors?: Record<string, string[]> }, 400];
 
+/**
+ * Identifies a heartbeat across resends. An imported WakaTime heartbeat is identified by its WakaTime id alone: an
+ * export file carries no user agent or machine lists while the API does, so the same heartbeat from the two sources
+ * differs in exactly the fields the content hash covers.
+ */
 const dedupHash = (userId: string, heartbeat: HeartbeatInput, machine: string | null, userAgent: string | null) =>
 	createHash('sha1')
 		.update(
-			JSON.stringify([
-				userId,
-				heartbeat.time,
-				heartbeat.entity,
-				heartbeat.type,
-				heartbeat.category,
-				heartbeat.project ?? null,
-				heartbeat.branch ?? null,
-				heartbeat.language ?? null,
-				heartbeat.isWrite,
-				heartbeat.lineno ?? null,
-				heartbeat.cursorpos ?? null,
-				heartbeat.lines ?? null,
-				heartbeat.aiLineChanges ?? null,
-				heartbeat.humanLineChanges ?? null,
-				machine,
-				userAgent,
-			]),
+			JSON.stringify(
+				heartbeat.sourceId
+					? [userId, 'wakatime', heartbeat.sourceId]
+					: [
+							userId,
+							heartbeat.time,
+							heartbeat.entity,
+							heartbeat.type,
+							heartbeat.category,
+							heartbeat.project ?? null,
+							heartbeat.branch ?? null,
+							heartbeat.language ?? null,
+							heartbeat.isWrite,
+							heartbeat.lineno ?? null,
+							heartbeat.cursorpos ?? null,
+							heartbeat.lines ?? null,
+							heartbeat.aiLineChanges ?? null,
+							heartbeat.humanLineChanges ?? null,
+							machine,
+							userAgent,
+						],
+			),
 		)
 		.digest('hex');
 

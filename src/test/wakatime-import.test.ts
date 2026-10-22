@@ -4,6 +4,7 @@ import { connectMongo } from '@/lib/mongo/connection';
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { mongoWakatimeImportService } from '@/lib/mongo/wakatime-import/wakatime-import.service';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
+import { importService } from '@/server/import/import.service';
 import { wakatimeImportService } from '@/server/wakatime-import/wakatime-import.service';
 
 import { CLI_USER_AGENT } from './api';
@@ -21,7 +22,8 @@ const requested: string[] = [];
 
 const heartbeatsFor = (date: string, count: number) =>
 	Array.from({ length: count }, (_, index) => ({
-		id: `${date}-${index}`,
+		// WakaTime ids are UUIDs; this one is unique per date and index.
+		id: `00000000-0000-4000-8000-${date.replaceAll('-', '')}${String(index).padStart(4, '0')}`,
 		entity: '/home/me/app/src/index.ts',
 		type: 'file',
 		category: 'coding',
@@ -63,7 +65,7 @@ function fakeWakatime(input: string | URL | Request, init?: RequestInit) {
 	}
 }
 
-const latest = async () => (await wakatimeImportService.getStatus(userId)).data!;
+const latest = async (user = userId) => (await wakatimeImportService.getStatus(user)).data!;
 /** Jobs with their select:false `apiKey` included. */
 const jobsWithKey = async (filter: Record<string, unknown>) =>
 	(await mongoWakatimeImportService.find(filter, '+apiKey', { sort: { createdAt: -1 } })) as IWakatimeImportZodSchema[];
@@ -128,5 +130,27 @@ describe('import from wakatime.com', () => {
 		await wakatimeImportService.start(userId, GOOD_KEY);
 		await vi.waitFor(async () => expect((await latest()).status).toBe('done'));
 		expect(await mongoHeartbeatService.count({ userId })).toBe(17);
+	});
+});
+
+describe('export file and API import together', () => {
+	let fileUserId: string;
+
+	beforeAll(async () => {
+		({
+			user: { id: fileUserId },
+		} = await signUpTestUser({ body: { email: 'file-then-api@wakacraft.test', name: 'Both' } }));
+	});
+
+	it('an API import after a file import of the same history adds nothing', async () => {
+		// A WakaTime export file has no user agent or machine lists, so these heartbeats arrive without either.
+		await importService.importBatch(fileUserId, {
+			heartbeats: [...heartbeatsFor(days[0], 11), ...heartbeatsFor(days[1], 6)],
+		});
+		expect(await mongoHeartbeatService.count({ userId: fileUserId })).toBe(17);
+
+		await wakatimeImportService.start(fileUserId, GOOD_KEY);
+		await vi.waitFor(async () => expect((await latest(fileUserId)).status).toBe('done'));
+		expect(await mongoHeartbeatService.count({ userId: fileUserId })).toBe(17);
 	});
 });
