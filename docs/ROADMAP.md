@@ -35,7 +35,8 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
       projects, team summaries, member summaries and durations
 - [x] Invoices: clients with hourly rates, rounding and projects; frozen, numbered, printable invoices with status
 - [x] External durations (`external_durations`, `.bulk`): meetings and other non-editor time, merged into all stats without double counting
-- [ ] Commits (`projects/:project/commits`) with a GitHub/GitLab integration
+- [x] Commits (`projects/:project/commits`) from GitHub via the sign-in token (opt-in `repo` scope for private
+      repos); your coding time since the previous commit, on the project page. GitLab not yet supported
 - [x] OAuth 2 apps (`/oauth/authorize`, `/oauth/token`, `/oauth/revoke`, PKCE, refresh rotation) with per-route
       scopes; developer apps and authorized apps in Settings
 

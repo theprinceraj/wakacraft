@@ -10,6 +10,7 @@ import { Panel, PanelEmpty } from '@/components/dashboard/panel';
 import { RangePicker } from '@/components/dashboard/range-picker';
 import { RankedList } from '@/components/dashboard/ranked-list';
 import { StatTile } from '@/components/dashboard/stat-tile';
+import { ProjectCommits } from '@/components/projects/project-commits';
 import { ProjectSettings } from '@/components/projects/project-settings';
 import { requireSession } from '@/lib/auth/session';
 import { NotFoundException } from '@/lib/http/errors';
@@ -147,6 +148,12 @@ async function Project({ params, searchParams }: PageProps<'/projects/[name]'>) 
 					/>
 				</Panel>
 			</div>
+
+			{project.repository ? (
+				<Panel label="Commits" meta="Your time since the previous commit">
+					<ProjectCommits project={project.name} />
+				</Panel>
+			) : null}
 		</div>
 	);
 }
