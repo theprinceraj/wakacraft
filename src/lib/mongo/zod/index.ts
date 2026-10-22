@@ -41,6 +41,13 @@ export {
 	type IPartialExternalDurationZodSchema,
 } from './external-duration.dto';
 export {
+	GlobalStatsZodSchema,
+	type IGlobalStatsZodSchema,
+	type IGlobalStatsZodSchemaInput,
+	PartialGlobalStatsZodSchema,
+	type IPartialGlobalStatsZodSchema,
+} from './global-stats.dto';
+export {
 	GoalZodSchema,
 	type IGoalZodSchema,
 	type IGoalZodSchemaInput,

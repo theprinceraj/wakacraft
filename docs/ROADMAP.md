@@ -42,7 +42,7 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 ## Platform
 
 - [x] `meta`, `editors`, `program_languages`, `file_experts` (you + teammates in your orgs)
-- [ ] Global aggregated `stats/:range` (all public users' languages/editors/OS)
+- [x] Global aggregated `stats/:range` (last 7/30 days across public users, per-breakdown privacy, hourly cache)
 - [x] Rate limiting on ingestion (5000 heartbeats / 10 min per user, `429` + `Retry-After`)
 - [x] Vercel cron (`/api/cron/rollups`, `CRON_SECRET`) pre-builds active users' yesterday
 - [x] Close the rollup write race: a heartbeat arriving between computing a past day and caching it can leave that day
