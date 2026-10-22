@@ -6,6 +6,8 @@ import { NotFoundException } from '@/lib/http/errors';
 import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { addDays, localDateOf, localDayBounds } from '@/lib/util/Time';
+import { applyRules } from '@/server/custom-rule/custom-rule.matcher';
+import { customRuleService } from '@/server/custom-rule/custom-rule.service';
 import { machineService } from '@/server/machine/machine.service';
 import { projectService } from '@/server/project/project.service';
 import { userAgentService } from '@/server/user-agent/user-agent.service';
@@ -80,19 +82,22 @@ class HeartbeatService {
 
 		if (valid.length) {
 			const machine = context.machineName?.trim().slice(0, 256) || null;
-			const [machineRecord, userAgents] = await Promise.all([
+			const [machineRecord, userAgents, rules] = await Promise.all([
 				machine ? machineService.touch(userId, machine) : null,
 				userAgentService.touchMany(
 					userId,
 					valid.map(({ heartbeat }) => heartbeat.userAgent ?? context.userAgent),
 				),
+				customRuleService.rulesFor(userId),
 			]);
 
+			// Custom rules run on the enriched heartbeat (they can match editor/OS/machine). The dedup hash stays on the
+			// original, so an offline-queue resend still collides after a rule renamed its project.
 			const docs = valid.map(({ heartbeat }) => {
 				const userAgentValue = heartbeat.userAgent ?? context.userAgent;
 				const userAgent = userAgentValue ? userAgents.get(userAgentValue) : undefined;
 				const { userAgent: _userAgent, ...fields } = heartbeat;
-				return {
+				const enriched = {
 					...fields,
 					userId,
 					userAgentId: userAgent?.id,
@@ -101,16 +106,25 @@ class HeartbeatService {
 					machine: machineRecord?.name,
 					dedupHash: dedupHash(userId, heartbeat, machine, userAgentValue),
 				};
+				return rules.length ? applyRules(enriched, rules) : enriched;
 			});
 
-			const { inserted } = await mongoHeartbeatService.insertManyIgnoringDuplicates(docs);
+			const kept = docs.filter((doc): doc is NonNullable<typeof doc> => doc !== null);
+			const { inserted } = await mongoHeartbeatService.insertManyIgnoringDuplicates(kept);
+			const insertedByHash = new Map(
+				inserted.flatMap((heartbeat, position) =>
+					heartbeat ? [[kept[position].dedupHash, heartbeat.id] as const] : [],
+				),
+			);
 			const existingIds = await this.idsForDuplicates(
 				userId,
-				docs.filter((_doc, index) => inserted[index] === null).map((doc) => doc.dedupHash),
+				kept.filter((doc) => !insertedByHash.has(doc.dedupHash)).map((doc) => doc.dedupHash),
 			);
 
 			valid.forEach(({ index, heartbeat }, position) => {
-				const id = inserted[position]?.id ?? existingIds.get(docs[position].dedupHash) ?? '';
+				const doc = docs[position];
+				// A heartbeat dropped by a delete rule is still acknowledged, so the plugin doesn't retry it forever.
+				const id = doc ? (insertedByHash.get(doc.dedupHash) ?? existingIds.get(doc.dedupHash) ?? '') : '';
 				results[index] = [{ data: { id, entity: heartbeat.entity, type: heartbeat.type, time: heartbeat.time } }, 201];
 			});
 

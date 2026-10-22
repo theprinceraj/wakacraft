@@ -3,11 +3,13 @@ import { Suspense } from 'react';
 import { EditorSetup } from '@/components/app/editor-setup';
 import { Panel } from '@/components/dashboard/panel';
 import { ApiKeys } from '@/components/settings/api-keys';
+import { CustomRulesEditor } from '@/components/settings/custom-rules-editor';
 import { PreferencesForm } from '@/components/settings/preferences-form';
 import { requireSession } from '@/lib/auth/session';
 import { getBaseUrl } from '@/lib/base-url';
 import { toApiKeyResponse } from '@/server/api-key/api-key.response.dto';
 import { apiKeyService } from '@/server/api-key/api-key.service';
+import { customRuleService } from '@/server/custom-rule/custom-rule.service';
 import { userService } from '@/server/user/user.service';
 
 import type { Metadata } from 'next';
@@ -24,10 +26,11 @@ export default function SettingsPage() {
 
 async function Settings() {
 	const session = await requireSession('/settings');
-	const [user, keys, baseUrl] = await Promise.all([
+	const [user, keys, baseUrl, rules] = await Promise.all([
 		userService.getCurrentUser(session.user.id),
 		apiKeyService.list(session.user.id),
 		getBaseUrl(),
+		customRuleService.list(session.user.id),
 	]);
 	const timezones = Intl.supportedValuesOf('timeZone');
 	if (!timezones.includes(user.timezone)) timezones.unshift(user.timezone);
@@ -58,6 +61,12 @@ async function Settings() {
 					timezones={timezones}
 				/>
 			</Panel>
+
+			<div id="custom-rules" className="scroll-mt-16">
+				<Panel label="Custom rules">
+					<CustomRulesEditor initialRules={rules.data} />
+				</Panel>
+			</div>
 		</div>
 	);
 }

@@ -10,10 +10,10 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 
 ## Next — phase 5: daily-use features
 
-- [ ] **Project detail page** — branches, files (entities), languages and timeline per project (`summaries?project=`
-      already returns branches + entities)
-- [ ] **Goals** — `goals`, `goals/:goal` (daily/weekly targets, per project/language, progress chart, streaks)
-- [ ] **Insights** — `insights/:type/:range` (weekdays, days, best_day, daily_average, per-dimension)
+- [x] **Project detail page** — languages over time, files, branches, categories, editors, machines; color + repo
+- [x] **Goals** — `goals`, `goals/:goal` (daily/weekly, at least/at most, project/language/editor/category filters,
+      ignored weekdays and zero days, streaks, 14-day / 8-week history)
+- [x] **Insights** — `insights/:type/:range` (all WakaTime types + `hours` time-of-day) and an Insights page
 - [ ] **Custom rules** — rename/merge projects, remap languages by path pattern; re-apply to history
 - [ ] **Import from WakaTime** — upload WakaTime's data export so users bring their history
 - [ ] **Data export** — `data_dumps` (heartbeats / daily JSON)
@@ -42,4 +42,6 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 - [ ] Vercel cron to pre-build yesterday's rollups (today they are built on first read)
 - [ ] Close the rollup write race: a heartbeat arriving between computing a past day and caching it can leave that day
       stale until the next heartbeat for it (store a heartbeat count/watermark with each rollup)
+- [x] Rollup format versioning (`ROLLUP_VERSION`) so code changes never serve stale cached totals
+- [x] Collision-safe snowflake ids across concurrent processes
 - [ ] Light-theme toggle (tokens already exist)
