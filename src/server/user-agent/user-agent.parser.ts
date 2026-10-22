@@ -15,7 +15,7 @@ export interface ParsedUserAgent {
 	isDesktopApp: boolean;
 }
 
-const EDITOR_NAMES: Record<string, string> = {
+export const EDITOR_NAMES: Record<string, string> = {
 	vscode: 'VS Code',
 	code: 'VS Code',
 	'visual-studio-code': 'VS Code',

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { requireSelf, route, UserParamSchema } from '@/lib/http/route';
 import { DateQuerySchema } from '@/server/heartbeat/heartbeat.request.dto';
 import { heartbeatService } from '@/server/heartbeat/heartbeat.service';
+import { rateLimitService } from '@/server/rate-limit/rate-limit.service';
 import { statsService } from '@/server/stats/stats.service';
 
 export const GET = route(
@@ -17,6 +18,7 @@ export const GET = route(
 /** Single heartbeat. wakatime-cli always uses the bulk endpoint; this exists for other WakaTime clients. */
 export const POST = route({ auth: 'required', params: UserParamSchema }, async ({ request, caller, params }) => {
 	const userId = await requireSelf(params.user, caller);
+	await rateLimitService.consume(userId, 'heartbeats');
 	const body: unknown = await request.json().catch(() => null);
 	const [[result, status]] = await heartbeatService.ingest(userId, [body], {
 		userAgent: request.headers.get('user-agent'),

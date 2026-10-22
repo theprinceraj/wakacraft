@@ -118,6 +118,20 @@ export {
 	type IPartialProjectZodSchema,
 } from './project.dto';
 export {
+	RateLimitZodSchema,
+	type IRateLimitZodSchema,
+	type IRateLimitZodSchemaInput,
+	PartialRateLimitZodSchema,
+	type IPartialRateLimitZodSchema,
+} from './rate-limit.dto';
+export {
+	RollupInvalidationZodSchema,
+	type IRollupInvalidationZodSchema,
+	type IRollupInvalidationZodSchemaInput,
+	PartialRollupInvalidationZodSchema,
+	type IPartialRollupInvalidationZodSchema,
+} from './rollup-invalidation.dto';
+export {
 	RuleJobZodSchema,
 	type IRuleJobZodSchema,
 	type IRuleJobZodSchemaInput,

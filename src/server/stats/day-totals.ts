@@ -1,4 +1,5 @@
 import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
+import { mongoRollupInvalidationService } from '@/lib/mongo/rollup-invalidation/rollup-invalidation.service';
 import { addDays, localClock, localDayBounds, todayIn } from '@/lib/util/Time';
 import { firstActivityAtOrAfter, loadActivity } from './activity-stream';
 
@@ -147,6 +148,13 @@ export async function loadDayTotals(
 	}
 
 	const missing = dates.filter((date) => !result.has(date));
+	// Read before any heartbeat: if a date's generation moves while we compute, we may have missed that activity.
+	const generationsBefore = cacheable
+		? await mongoRollupInvalidationService.generations(
+				userId,
+				missing.filter((date) => date < today),
+			)
+		: new Map<string, number>();
 	const extraFilter = heartbeatFilter(settings, filter);
 	const timeoutSeconds = settings.timeoutMinutes * 60;
 	const clock = localClock(settings.timezone);
@@ -192,6 +200,16 @@ export async function loadDayTotals(
 					.catch((error: unknown) => console.warn('Failed to cache daily summary', error));
 			}),
 		);
+		// Write, then check: an invalidation bumps before it deletes, so either the bump shows here (and we drop our
+		// rollup) or its delete runs after our write (and drops it). No rollup outlives activity it didn't include.
+		const generationsAfter = await mongoRollupInvalidationService.generations(
+			userId,
+			toStore.map(({ date }) => date),
+		);
+		const stale = toStore
+			.map(({ date }) => date)
+			.filter((date) => generationsAfter.get(date) !== generationsBefore.get(date));
+		if (stale.length) await mongoDailySummaryService.deleteMany({ ...rollupKey, date: { $in: stale } });
 	}
 
 	return result;

@@ -39,11 +39,12 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
 
 ## Platform
 
-- [ ] `meta`, `editors`, `program_languages`, aggregated `stats/:range`, `file_experts`
-- [ ] Rate limiting on ingestion
-- [ ] Vercel cron to pre-build yesterday's rollups (today they are built on first read)
-- [ ] Close the rollup write race: a heartbeat arriving between computing a past day and caching it can leave that day
-      stale until the next heartbeat for it (store a heartbeat count/watermark with each rollup)
+- [x] `meta`, `editors`, `program_languages`, `file_experts` (you + teammates in your orgs)
+- [ ] Global aggregated `stats/:range` (all public users' languages/editors/OS)
+- [x] Rate limiting on ingestion (5000 heartbeats / 10 min per user, `429` + `Retry-After`)
+- [x] Vercel cron (`/api/cron/rollups`, `CRON_SECRET`) pre-builds active users' yesterday
+- [x] Close the rollup write race: a heartbeat arriving between computing a past day and caching it can leave that day
+      stale until the next heartbeat for it (per-date generation counters, checked after writing)
 - [x] Rollup format versioning (`ROLLUP_VERSION`) so code changes never serve stale cached totals
 - [x] Collision-safe snowflake ids across concurrent processes
 - [ ] Light-theme toggle (tokens already exist)

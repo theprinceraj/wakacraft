@@ -4,7 +4,13 @@ import { z, type ZodType } from 'zod';
 import { connectMongo } from '@/lib/mongo/connection';
 
 import { resolveCaller, type Caller } from './authenticate';
-import { ForbiddenException, HttpError, NotFoundException, UnauthorizedException } from './errors';
+import {
+	ForbiddenException,
+	HttpError,
+	NotFoundException,
+	TooManyRequestsException,
+	UnauthorizedException,
+} from './errors';
 
 type AuthMode = 'required' | 'session' | 'optional' | 'none';
 
@@ -115,7 +121,13 @@ export function route<
 			if (error instanceof HttpError) {
 				return NextResponse.json(
 					{ error: error.message, ...(error.errors ? { errors: error.errors } : {}) },
-					{ status: error.status },
+					{
+						status: error.status,
+						headers:
+							error instanceof TooManyRequestsException && error.retryAfter
+								? { 'Retry-After': String(error.retryAfter) }
+								: undefined,
+					},
 				);
 			}
 			console.error(`[${request.method} ${request.nextUrl.pathname}]`, error);
