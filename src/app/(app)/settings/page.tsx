@@ -5,6 +5,7 @@ import { Panel } from '@/components/dashboard/panel';
 import { ApiKeys } from '@/components/settings/api-keys';
 import { CustomRulesEditor } from '@/components/settings/custom-rules-editor';
 import { ImportExport } from '@/components/settings/import-export';
+import { AuthorizedApps, DeveloperApps } from '@/components/settings/oauth-apps';
 import { PreferencesForm } from '@/components/settings/preferences-form';
 import { PublicProfileForm } from '@/components/settings/public-profile-form';
 import { ShareSnippets } from '@/components/settings/share-snippets';
@@ -14,6 +15,7 @@ import { getBaseUrl } from '@/lib/base-url';
 import { toApiKeyResponse } from '@/server/api-key/api-key.response.dto';
 import { apiKeyService } from '@/server/api-key/api-key.service';
 import { customRuleService } from '@/server/custom-rule/custom-rule.service';
+import { oauthService } from '@/server/oauth/oauth.service';
 import { projectService } from '@/server/project/project.service';
 import { userService } from '@/server/user/user.service';
 import { wakatimeImportService } from '@/server/wakatime-import/wakatime-import.service';
@@ -32,13 +34,15 @@ export default function SettingsPage() {
 
 async function Settings() {
 	const session = await requireSession('/settings');
-	const [user, keys, baseUrl, rules, projects, wakatimeImport] = await Promise.all([
+	const [user, keys, baseUrl, rules, projects, wakatimeImport, apps, authorizations] = await Promise.all([
 		userService.getCurrentUser(session.user.id),
 		apiKeyService.list(session.user.id),
 		getBaseUrl(),
 		customRuleService.list(session.user.id),
 		projectService.list(session.user.id),
 		wakatimeImportService.getStatus(session.user.id),
+		oauthService.listApps(session.user.id),
+		oauthService.listAuthorizations(session.user.id),
 	]);
 	const timezones = Intl.supportedValuesOf('timeZone');
 	if (!timezones.includes(user.timezone)) timezones.unshift(user.timezone);
@@ -96,6 +100,18 @@ async function Settings() {
 				<Panel label="Import & export" bodyClassName="flex flex-col gap-6">
 					<ImportExport />
 					<WakatimeImport initial={wakatimeImport.data} />
+				</Panel>
+			</div>
+
+			<div id="authorized-apps" className="scroll-mt-16">
+				<Panel label="Authorized apps">
+					<AuthorizedApps initial={authorizations.data} />
+				</Panel>
+			</div>
+
+			<div id="developer-apps" className="scroll-mt-16">
+				<Panel label="Developer apps (OAuth)">
+					<DeveloperApps initial={apps.data} baseUrl={baseUrl} />
 				</Panel>
 			</div>
 		</div>

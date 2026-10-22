@@ -1,9 +1,24 @@
 import { auth } from '@/lib/auth/auth';
+import { ACCESS_TOKEN_PREFIX, type OAuthScope } from '@/lib/util/OAuth';
 import { apiKeyService } from '@/server/api-key/api-key.service';
+import { oauthService } from '@/server/oauth/oauth.service';
 
 export interface Caller {
 	userId: string;
-	via: 'session' | 'api_key';
+	via: 'session' | 'api_key' | 'oauth';
+	/** Granted scopes, for OAuth callers only; sessions and API keys have full access. */
+	scopes?: OAuthScope[];
+}
+
+/** An OAuth access token, sent as `Authorization: Bearer waka_tok_…` or `?access_token=`. */
+export function extractAccessToken(request: Request): string | undefined {
+	const header = request.headers.get('authorization');
+	if (header) {
+		const [scheme, value = ''] = header.trim().split(/\s+/, 2);
+		return scheme.toLowerCase() === 'bearer' && value.startsWith(ACCESS_TOKEN_PREFIX) ? value : undefined;
+	}
+	const fromQuery = new URL(request.url).searchParams.get('access_token');
+	return fromQuery?.startsWith(ACCESS_TOKEN_PREFIX) ? fromQuery : undefined;
 }
 
 const API_KEY_PATTERN = /^waka_[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
@@ -39,8 +54,14 @@ export function extractApiKey(request: Request): string | null | undefined {
 	return undefined;
 }
 
-/** An explicit credential (API key) wins over the session cookie; a malformed or unknown key is a 401. */
+/** An explicit credential (OAuth token or API key) wins over the session cookie; an unknown one is a 401. */
 export async function resolveCaller(request: Request): Promise<Caller | null> {
+	const accessToken = extractAccessToken(request);
+	if (accessToken) {
+		const grant = await oauthService.resolveAccessToken(accessToken);
+		return grant ? { userId: grant.userId, via: 'oauth', scopes: grant.scopes } : null;
+	}
+
 	const apiKey = extractApiKey(request);
 	if (apiKey === null) return null;
 

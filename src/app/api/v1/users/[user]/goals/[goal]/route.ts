@@ -2,9 +2,12 @@ import { requireSelf, route } from '@/lib/http/route';
 import { GoalParamsSchema, UpdateGoalSchema } from '@/server/goal/goal.request.dto';
 import { goalService } from '@/server/goal/goal.service';
 
-export const GET = route({ auth: 'required', params: GoalParamsSchema }, async ({ caller, params }) => ({
-	data: await goalService.get(await requireSelf(params.user, caller), params.goal),
-}));
+export const GET = route(
+	{ auth: 'required', scope: 'read_goals', params: GoalParamsSchema },
+	async ({ caller, params }) => ({
+		data: await goalService.get(await requireSelf(params.user, caller), params.goal),
+	}),
+);
 
 export const PATCH = route(
 	{ auth: 'session', params: GoalParamsSchema, body: UpdateGoalSchema },

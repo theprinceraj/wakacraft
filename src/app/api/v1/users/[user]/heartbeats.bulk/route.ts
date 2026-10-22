@@ -6,7 +6,13 @@ import { statsService } from '@/server/stats/stats.service';
 
 /** The endpoint wakatime-cli sends every heartbeat to. Responds `{ responses: [[body, status], …] }`. */
 export const POST = route(
-	{ auth: 'required', params: UserParamSchema, body: BulkHeartbeatsRequestSchema, status: 202 },
+	{
+		auth: 'required',
+		scope: 'write_heartbeats',
+		params: UserParamSchema,
+		body: BulkHeartbeatsRequestSchema,
+		status: 202,
+	},
 	async ({ request, caller, params, body }) => {
 		const userId = await requireSelf(params.user, caller);
 		// A 429 keeps the batch in wakatime-cli's offline queue, to be retried later.
@@ -21,7 +27,13 @@ export const POST = route(
 );
 
 export const DELETE = route(
-	{ auth: 'required', params: UserParamSchema, body: DeleteHeartbeatsRequestSchema, status: 200 },
+	{
+		auth: 'required',
+		scope: 'write_heartbeats',
+		params: UserParamSchema,
+		body: DeleteHeartbeatsRequestSchema,
+		status: 200,
+	},
 	async ({ caller, params, body }) => {
 		const userId = await requireSelf(params.user, caller);
 		const { timezone } = await statsService.resolveSettings(userId);

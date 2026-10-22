@@ -5,7 +5,7 @@ import { publicProfileService } from '@/server/user/public-profile.service';
 
 /** Your own stats, or another user's public stats (if they made them public). */
 export const GET = route(
-	{ auth: 'optional', params: StatsParamsSchema, query: StatsSettingsQuerySchema },
+	{ auth: 'optional', scope: 'read_stats', params: StatsParamsSchema, query: StatsSettingsQuerySchema },
 	async ({ caller, params, query }) => {
 		const target = await resolveUser(params.user, caller);
 		return target.isSelf

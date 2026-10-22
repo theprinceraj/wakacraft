@@ -90,6 +90,27 @@ export {
 	type IPartialMachineZodSchema,
 } from './machine.dto';
 export {
+	OAuthAppZodSchema,
+	type IOAuthAppZodSchema,
+	type IOAuthAppZodSchemaInput,
+	PartialOAuthAppZodSchema,
+	type IPartialOAuthAppZodSchema,
+} from './oauth-app.dto';
+export {
+	OAuthCodeZodSchema,
+	type IOAuthCodeZodSchema,
+	type IOAuthCodeZodSchemaInput,
+	PartialOAuthCodeZodSchema,
+	type IPartialOAuthCodeZodSchema,
+} from './oauth-code.dto';
+export {
+	OAuthTokenZodSchema,
+	type IOAuthTokenZodSchema,
+	type IOAuthTokenZodSchemaInput,
+	PartialOAuthTokenZodSchema,
+	type IPartialOAuthTokenZodSchema,
+} from './oauth-token.dto';
+export {
 	OrgDashboardZodSchema,
 	type IOrgDashboardZodSchema,
 	type IOrgDashboardZodSchemaInput,

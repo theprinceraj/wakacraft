@@ -5,7 +5,7 @@ import { publicProfileService } from '@/server/user/public-profile.service';
 
 /** Without a range, WakaTime returns the default range (last 7 days). */
 export const GET = route(
-	{ auth: 'optional', params: UserParamSchema, query: StatsSettingsQuerySchema },
+	{ auth: 'optional', scope: 'read_stats', params: UserParamSchema, query: StatsSettingsQuerySchema },
 	async ({ caller, params, query }) => {
 		const target = await resolveUser(params.user, caller);
 		return target.isSelf

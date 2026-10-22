@@ -4,6 +4,8 @@ import { z, type ZodType } from 'zod';
 import { connectMongo } from '@/lib/mongo/connection';
 
 import { resolveCaller, type Caller } from './authenticate';
+
+import type { OAuthScope } from '@/lib/util/OAuth';
 import {
 	ForbiddenException,
 	HttpError,
@@ -27,6 +29,11 @@ export interface RouteOptions<
 	 * be null. `none`: no lookup at all.
 	 */
 	auth: A;
+	/**
+	 * The OAuth scope a third-party app's token needs here (`any`: every token). Without one, OAuth tokens are refused
+	 * outright, so new endpoints stay closed to apps until someone decides which scope covers them.
+	 */
+	scope?: OAuthScope | 'any';
 	query?: Q;
 	body?: B;
 	params?: P;
@@ -80,6 +87,8 @@ export function route<
 	P extends ZodType | undefined = undefined,
 >(options: RouteOptions<A, Q, B, P>, handler: (context: HandlerContext<A, Q, B, P>) => Promise<unknown>) {
 	return async (request: NextRequest, routeContext: NextRouteContext): Promise<Response> => {
+		// Set when an OAuth app without the scope is treated as anonymous on a public endpoint.
+		let missingScope: string | undefined;
 		try {
 			await connectMongo();
 
@@ -89,6 +98,16 @@ export function route<
 				if (!caller && options.auth !== 'optional') throw new UnauthorizedException();
 				if (caller && options.auth === 'session' && caller.via !== 'session') {
 					throw new ForbiddenException('This endpoint requires signing in on the website');
+				}
+				if (caller?.via === 'oauth') {
+					const allowed =
+						options.scope === 'any' || (options.scope !== undefined && caller.scopes!.includes(options.scope));
+					// On public endpoints an app without the scope is just an anonymous visitor.
+					if (!allowed && options.auth === 'optional') {
+						caller = null;
+						missingScope = options.scope;
+					} else if (!options.scope) throw new ForbiddenException('This endpoint is not available to OAuth apps');
+					else if (!allowed) throw new ForbiddenException(`This token is missing the ${options.scope} scope`);
 				}
 			}
 
@@ -118,6 +137,10 @@ export function route<
 			if (result === undefined) return new Response(null, { status: options.status ?? 204 });
 			return NextResponse.json(result, { status: options.status ?? 200 });
 		} catch (error) {
+			// …and if the endpoint then wanted a signed-in caller after all, the real problem is the scope.
+			if (error instanceof UnauthorizedException && missingScope) {
+				error = new ForbiddenException(`This token is missing the ${missingScope} scope`);
+			}
 			if (error instanceof HttpError) {
 				return NextResponse.json(
 					{ error: error.message, ...(error.errors ? { errors: error.errors } : {}) },

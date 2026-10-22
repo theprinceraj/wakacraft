@@ -2,8 +2,9 @@ import { requireSelf, route } from '@/lib/http/route';
 import { OrgParamsSchema, UpdateOrgSchema } from '@/server/org/org.request.dto';
 import { orgService } from '@/server/org/org.service';
 
-export const GET = route({ auth: 'required', params: OrgParamsSchema }, async ({ caller, params }) =>
-	orgService.getOrg(await requireSelf(params.user, caller), params.org),
+export const GET = route(
+	{ auth: 'required', scope: 'read_orgs', params: OrgParamsSchema },
+	async ({ caller, params }) => orgService.getOrg(await requireSelf(params.user, caller), params.org),
 );
 
 export const PATCH = route(

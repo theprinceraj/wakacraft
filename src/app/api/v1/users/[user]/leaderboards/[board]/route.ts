@@ -3,7 +3,7 @@ import { BoardParamsSchema, LeadersQuerySchema } from '@/server/leaderboard/lead
 import { leaderboardService } from '@/server/leaderboard/leaderboard.service';
 
 export const GET = route(
-	{ auth: 'required', params: BoardParamsSchema, query: LeadersQuerySchema },
+	{ auth: 'required', scope: 'read_private_leaderboards', params: BoardParamsSchema, query: LeadersQuerySchema },
 	async ({ caller, params, query }) =>
 		leaderboardService.boardLeaders(await requireSelf(params.user, caller), params.board, query),
 );

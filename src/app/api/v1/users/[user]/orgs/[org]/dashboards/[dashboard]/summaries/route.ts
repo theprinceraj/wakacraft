@@ -4,7 +4,7 @@ import { orgService } from '@/server/org/org.service';
 
 /** The dashboard's whole team, summed per day, with each member's total for the range. */
 export const GET = route(
-	{ auth: 'required', params: DashboardParamsSchema, query: TeamSummariesQuerySchema },
+	{ auth: 'required', scope: 'read_orgs', params: DashboardParamsSchema, query: TeamSummariesQuerySchema },
 	async ({ caller, params, query }) =>
 		orgService.teamSummaries(await requireSelf(params.user, caller), params.org, params.dashboard, query),
 );
