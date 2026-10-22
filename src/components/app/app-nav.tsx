@@ -5,9 +5,12 @@ import {
 	LayoutDashboard,
 	Lightbulb,
 	LogOut,
+	Monitor,
+	Moon,
 	Receipt,
 	Settings,
 	Sparkles,
+	Sun,
 	Target,
 	Trophy,
 	Users,
@@ -21,6 +24,8 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuRadioGroup,
+	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -28,6 +33,7 @@ import { signOut } from '@/lib/auth/auth-client';
 import { cn } from '@/lib/utils';
 
 import { Logo } from './logo';
+import { useTheme } from './theme';
 
 const LINKS = [
 	{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -55,6 +61,7 @@ export function AppNavSkeleton() {
 export function AppNav({ user }: { user: { name: string; email: string; image?: string | null } }) {
 	const pathname = usePathname();
 	const router = useRouter();
+	const { theme, setTheme } = useTheme();
 	const initials = user.name
 		.split(/\s+/)
 		.map((part) => part[0])
@@ -105,6 +112,20 @@ export function AppNav({ user }: { user: { name: string; email: string; image?: 
 									<Settings /> Settings
 								</Link>
 							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">Theme</DropdownMenuLabel>
+							<DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+								<DropdownMenuRadioItem value="dark">
+									<Moon /> Dark
+								</DropdownMenuRadioItem>
+								<DropdownMenuRadioItem value="light">
+									<Sun /> Light
+								</DropdownMenuRadioItem>
+								<DropdownMenuRadioItem value="system">
+									<Monitor /> System
+								</DropdownMenuRadioItem>
+							</DropdownMenuRadioGroup>
+							<DropdownMenuSeparator />
 							<DropdownMenuItem
 								onSelect={async () => {
 									await signOut();

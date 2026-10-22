@@ -54,7 +54,7 @@
 	--radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Light theme: kept usable, but wakacraft is designed dark-first. */
+/* Light theme (opt-in from the account menu); wakacraft is designed dark-first. */
 :root {
 	--background: oklch(0.985 0.002 265);
 	--foreground: oklch(0.2 0.01 265);
@@ -150,7 +150,6 @@
 	}
 	html {
 		@apply font-sans;
-		color-scheme: dark;
 	}
 }
 

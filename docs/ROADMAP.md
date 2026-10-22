@@ -47,4 +47,4 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
       stale until the next heartbeat for it (per-date generation counters, checked after writing)
 - [x] Rollup format versioning (`ROLLUP_VERSION`) so code changes never serve stale cached totals
 - [x] Collision-safe snowflake ids across concurrent processes
-- [ ] Light-theme toggle (tokens already exist)
+- [x] Theme switch (dark default, light, system) in the account menu; applied before first paint
