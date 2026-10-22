@@ -71,9 +71,10 @@ export function toWireHeartbeat(raw: unknown, lookups: ImportLookups): unknown {
 		ai_line_changes: integer(heartbeat.ai_line_changes),
 		human_line_changes: integer(heartbeat.human_line_changes),
 		user_agent: text(heartbeat.user_agent) ?? (userAgentId ? lookups.userAgents.get(userAgentId) : undefined),
-		// Resolved via the export's machine list; with no list at all, the id is the best name available.
+		// Resolved via the export's machine list. With no list, a wakacraft export's id is already the name, but a
+		// WakaTime machine id (a UUID) names nothing, so it's left out for an API import to fill in later.
 		machine_name: machineId
-			? (lookups.machines.get(machineId) ?? (lookups.machines.size ? undefined : machineId))
+			? (lookups.machines.get(machineId) ?? (lookups.machines.size || wakatimeId(machineId) ? undefined : machineId))
 			: undefined,
 	};
 }

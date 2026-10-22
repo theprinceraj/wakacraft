@@ -74,6 +74,14 @@ describe('toWireHeartbeat', () => {
 		expect(wire).toMatchObject({ machine_name: 'macbook' });
 	});
 
+	it('leaves out a WakaTime machine id the export has no list for', () => {
+		const wire = toWireHeartbeat(
+			{ ...wakatimeHeartbeat, machine_name_id: '7fdd436f-ff0a-45fd-99d3-cdeb0304d4a7' },
+			buildLookups([], []),
+		);
+		expect(wire).toMatchObject({ machine_name: undefined });
+	});
+
 	it('resolves wakacraft exports, whose heartbeats reference machines by name', () => {
 		const lookups = buildLookups([], [{ id: '106', name: 'laptop', value: 'laptop' }]);
 		expect(toWireHeartbeat({ ...wakatimeHeartbeat, machine_name_id: 'laptop' }, lookups)).toMatchObject({
