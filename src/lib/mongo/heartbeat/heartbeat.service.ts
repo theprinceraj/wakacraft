@@ -50,6 +50,15 @@ export class MongoHeartbeatService extends MongoBaseService<IHeartbeatZodSchemaI
 		};
 	}
 
+	/** Sets fields on several heartbeats in one round trip, each by its id. */
+	public async patchMany(patches: { id: string; patch: Partial<HeartbeatInsert> }[]): Promise<void> {
+		if (!patches.length) return;
+		await this.model.bulkWrite(
+			patches.map(({ id, patch }) => ({ updateOne: { filter: { id }, update: { $set: patch } } })),
+			{ ordered: false },
+		);
+	}
+
 	/** Heartbeats in `[start, end)` (epoch seconds), oldest first — the input order every duration algorithm needs. */
 	public async findInRange(
 		userId: string,

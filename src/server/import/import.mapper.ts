@@ -4,6 +4,8 @@
  * the strings ingestion parses editor/OS from.
  */
 
+import { z } from 'zod';
+
 export interface ImportLookups {
 	userAgents: Map<string, string>;
 	machines: Map<string, string>;
@@ -16,6 +18,8 @@ const MAX_DEPENDENCIES = 500;
 const MAX_DEPENDENCY_LENGTH = 256;
 
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : undefined);
+/** WakaTime ids are UUIDs; wakacraft's own export ids are snowflakes, which mean nothing outside their instance. */
+const wakatimeId = (value: unknown) => (z.guid().safeParse(value).success ? (value as string) : undefined);
 const integer = (value: unknown) =>
 	typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : undefined;
 
@@ -44,6 +48,7 @@ export function toWireHeartbeat(raw: unknown, lookups: ImportLookups): unknown {
 	const machineId = text(heartbeat.machine_name_id);
 
 	return {
+		source_id: wakatimeId(heartbeat.id),
 		entity: heartbeat.entity,
 		type: heartbeat.type,
 		// WakaTime exports and its heartbeats API title-case categories ("AI Coding"); ingestion takes wakatime-cli's lowercase.
@@ -66,9 +71,10 @@ export function toWireHeartbeat(raw: unknown, lookups: ImportLookups): unknown {
 		ai_line_changes: integer(heartbeat.ai_line_changes),
 		human_line_changes: integer(heartbeat.human_line_changes),
 		user_agent: text(heartbeat.user_agent) ?? (userAgentId ? lookups.userAgents.get(userAgentId) : undefined),
-		// Resolved via the export's machine list; with no list at all, the id is the best name available.
+		// Resolved via the export's machine list. With no list, a wakacraft export's id is already the name, but a
+		// WakaTime machine id (a UUID) names nothing, so it's left out for an API import to fill in later.
 		machine_name: machineId
-			? (lookups.machines.get(machineId) ?? (lookups.machines.size ? undefined : machineId))
+			? (lookups.machines.get(machineId) ?? (lookups.machines.size || wakatimeId(machineId) ? undefined : machineId))
 			: undefined,
 	};
 }
