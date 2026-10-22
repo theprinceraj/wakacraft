@@ -4,6 +4,7 @@ import { EditorSetup } from '@/components/app/editor-setup';
 import { Panel } from '@/components/dashboard/panel';
 import { ApiKeys } from '@/components/settings/api-keys';
 import { CustomRulesEditor } from '@/components/settings/custom-rules-editor';
+import { ImportExport } from '@/components/settings/import-export';
 import { PreferencesForm } from '@/components/settings/preferences-form';
 import { requireSession } from '@/lib/auth/session';
 import { getBaseUrl } from '@/lib/base-url';
@@ -65,6 +66,12 @@ async function Settings() {
 			<div id="custom-rules" className="scroll-mt-16">
 				<Panel label="Custom rules">
 					<CustomRulesEditor initialRules={rules.data} />
+				</Panel>
+			</div>
+
+			<div id="import-export" className="scroll-mt-16">
+				<Panel label="Import & export">
+					<ImportExport />
 				</Panel>
 			</div>
 		</div>

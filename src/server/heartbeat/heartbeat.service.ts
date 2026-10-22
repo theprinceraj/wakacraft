@@ -13,7 +13,7 @@ import { projectService } from '@/server/project/project.service';
 import { userAgentService } from '@/server/user-agent/user-agent.service';
 import { userProfileService } from '@/server/user/user-profile.service';
 
-import { HeartbeatRequestSchema, type HeartbeatInput } from './heartbeat.request.dto';
+import { HeartbeatRequestSchema, ImportedHeartbeatSchema, type HeartbeatInput } from './heartbeat.request.dto';
 import { toHeartbeatResponse, type HeartbeatResponse } from './heartbeat.response.dto';
 
 import type { IHeartbeatZodSchema } from '@/lib/mongo/zod';
@@ -21,8 +21,10 @@ import type { IHeartbeatZodSchema } from '@/lib/mongo/zod';
 export interface IngestContext {
 	/** `User-Agent` header; a heartbeat's own `user_agent` field takes precedence. */
 	userAgent: string | null;
-	/** `X-Machine-Name` header. */
+	/** `X-Machine-Name` header; a heartbeat's own `machine_name` takes precedence. */
 	machineName: string | null;
+	/** Importing history: heartbeats older than the live-traffic age limit are accepted. */
+	historical?: boolean;
 }
 
 /** One element of the bulk response: `[body, status]`, exactly as wakatime-cli parses it. */
@@ -63,8 +65,9 @@ class HeartbeatService {
 		const results: (IngestResult | null)[] = rawHeartbeats.map(() => null);
 		const valid: { index: number; heartbeat: HeartbeatInput }[] = [];
 
+		const schema = context.historical ? ImportedHeartbeatSchema : HeartbeatRequestSchema;
 		rawHeartbeats.forEach((raw, index) => {
-			const parsed = HeartbeatRequestSchema.safeParse(raw);
+			const parsed = schema.safeParse(raw);
 			if (parsed.success) valid.push({ index, heartbeat: parsed.data });
 			else {
 				const { fieldErrors } = z.flattenError(parsed.error);
@@ -81,9 +84,13 @@ class HeartbeatService {
 		});
 
 		if (valid.length) {
-			const machine = context.machineName?.trim().slice(0, 256) || null;
-			const [machineRecord, userAgents, rules] = await Promise.all([
-				machine ? machineService.touch(userId, machine) : null,
+			const headerMachine = context.machineName?.trim().slice(0, 256) || null;
+			const machineOf = (heartbeat: HeartbeatInput) => heartbeat.machineName ?? headerMachine;
+			const [machines, userAgents, rules] = await Promise.all([
+				machineService.touchMany(
+					userId,
+					valid.map(({ heartbeat }) => machineOf(heartbeat)),
+				),
 				userAgentService.touchMany(
 					userId,
 					valid.map(({ heartbeat }) => heartbeat.userAgent ?? context.userAgent),
@@ -96,14 +103,15 @@ class HeartbeatService {
 			const docs = valid.map(({ heartbeat }) => {
 				const userAgentValue = heartbeat.userAgent ?? context.userAgent;
 				const userAgent = userAgentValue ? userAgents.get(userAgentValue) : undefined;
-				const { userAgent: _userAgent, ...fields } = heartbeat;
+				const machine = machineOf(heartbeat);
+				const { userAgent: _userAgent, machineName: _machineName, ...fields } = heartbeat;
 				const enriched = {
 					...fields,
 					userId,
 					userAgentId: userAgent?.id,
 					editor: userAgent?.editor ?? undefined,
 					operatingSystem: userAgent?.os ?? undefined,
-					machine: machineRecord?.name,
+					machine: machine ? machines.get(machine)?.name : undefined,
 					dedupHash: dedupHash(userId, heartbeat, machine, userAgentValue),
 				};
 				return rules.length ? applyRules(enriched, rules) : enriched;

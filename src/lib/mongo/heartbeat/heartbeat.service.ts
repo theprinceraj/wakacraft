@@ -71,6 +71,21 @@ export class MongoHeartbeatService extends MongoBaseService<IHeartbeatZodSchemaI
 		return first ?? null;
 	}
 
+	/** Every heartbeat of a user, oldest first, without loading them all into memory (exports). */
+	public streamForUser(userId: string): AsyncIterable<IHeartbeatZodSchema> {
+		return this.model
+			.find({ userId })
+			.sort({ time: 1 })
+			.select('-dedupHash')
+			.lean()
+			.cursor({ batchSize: 1000 }) as unknown as AsyncIterable<IHeartbeatZodSchema>;
+	}
+
+	public async findLast(userId: string): Promise<Pick<IHeartbeatZodSchema, 'time'> | null> {
+		const [last] = await this.find({ userId }, ['time'], { sort: { time: -1 }, limit: 1 });
+		return last ?? null;
+	}
+
 	public async findFirst(userId: string): Promise<Pick<IHeartbeatZodSchema, 'time'> | null> {
 		const [first] = await this.find({ userId }, ['time'], { sort: { time: 1 }, limit: 1 });
 		return first ?? null;

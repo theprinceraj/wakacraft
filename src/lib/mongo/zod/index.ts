@@ -20,6 +20,13 @@ export {
 	type IPartialDailySummaryZodSchema,
 } from './daily-summary.dto';
 export {
+	DataDumpZodSchema,
+	type IDataDumpZodSchema,
+	type IDataDumpZodSchemaInput,
+	PartialDataDumpZodSchema,
+	type IPartialDataDumpZodSchema,
+} from './data-dump.dto';
+export {
 	GoalZodSchema,
 	type IGoalZodSchema,
 	type IGoalZodSchemaInput,
