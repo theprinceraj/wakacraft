@@ -1,6 +1,6 @@
 import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
-import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { addDays, localClock, localDayBounds, todayIn } from '@/lib/util/Time';
+import { firstActivityAtOrAfter, loadActivity } from './activity-stream';
 
 import { computeTotals, type DayTotals, type EngineHeartbeat } from './engine';
 
@@ -152,10 +152,8 @@ export async function loadDayTotals(
 			const runStart = localDayBounds(run[0], settings.timezone).start;
 			const runEnd = localDayBounds(run.at(-1)!, settings.timezone).end;
 			const [heartbeats, afterRun] = await Promise.all([
-				mongoHeartbeatService.findInRange(userId, runStart, runEnd, extraFilter, ENGINE_FIELDS) as Promise<
-					EngineHeartbeat[]
-				>,
-				mongoHeartbeatService.findFirstAtOrAfter(userId, runEnd, extraFilter),
+				loadActivity(userId, runStart, runEnd, extraFilter, ENGINE_FIELDS) as Promise<EngineHeartbeat[]>,
+				firstActivityAtOrAfter(userId, runEnd, extraFilter),
 			]);
 
 			let cursor = 0;

@@ -27,6 +27,13 @@ export {
 	type IPartialDataDumpZodSchema,
 } from './data-dump.dto';
 export {
+	ExternalDurationZodSchema,
+	type IExternalDurationZodSchema,
+	type IExternalDurationZodSchemaInput,
+	PartialExternalDurationZodSchema,
+	type IPartialExternalDurationZodSchema,
+} from './external-duration.dto';
+export {
 	GoalZodSchema,
 	type IGoalZodSchema,
 	type IGoalZodSchemaInput,

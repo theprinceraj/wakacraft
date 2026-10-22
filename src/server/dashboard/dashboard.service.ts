@@ -5,6 +5,7 @@ import { loadDayTotals } from '@/server/stats/day-totals';
 import { computeDurations, type DayTotals, type EngineHeartbeat, type StatTotal } from '@/server/stats/engine';
 import { resolveSummaryRange, type SummaryRangeName } from '@/server/stats/ranges';
 import { statsService, sumTotals } from '@/server/stats/stats.service';
+import { firstActivityAtOrAfter, loadActivity } from '@/server/stats/activity-stream';
 
 /** Ranges offered by the dashboard's range picker, keyed by URL slug. */
 export const DashboardRanges = {
@@ -114,14 +115,14 @@ class DashboardService {
 
 		const [totals, timelineHeartbeats, afterTimeline, projectDocs, firstHeartbeat] = await Promise.all([
 			loadDayTotals(userId, windowDates, settings),
-			mongoHeartbeatService.findInRange(
+			loadActivity(
 				userId,
 				dayStart,
 				dayEnd,
 				settings.writesOnly ? { isWrite: true } : {},
 				'time entity category project language',
 			) as Promise<EngineHeartbeat[]>,
-			mongoHeartbeatService.findFirstAtOrAfter(userId, dayEnd, settings.writesOnly ? { isWrite: true } : {}),
+			firstActivityAtOrAfter(userId, dayEnd, settings.writesOnly ? { isWrite: true } : {}),
 			mongoProjectService.find({ userId }, ['name', 'color']),
 			mongoHeartbeatService.findFirst(userId),
 		]);

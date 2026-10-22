@@ -10,9 +10,10 @@ import {
 	todayIn,
 } from '@/lib/util/Time';
 import { userProfileService } from '@/server/user/user-profile.service';
+import { firstActivityAtOrAfter, loadActivity } from './activity-stream';
 
 import { emptyTotals, heartbeatFilter, loadDayTotals, type StatsSettings } from './day-totals';
-import { computeDurations, mergeHours, mergeStatTotals, type DayTotals, type EngineHeartbeat } from './engine';
+import { computeDurations, mergeHours, mergeStatTotals, type DayTotals } from './engine';
 import { resolveStatsRange, resolveSummaryRange } from './ranges';
 import {
 	dailyAverage,
@@ -99,8 +100,8 @@ class StatsService {
 		const extraFilter = heartbeatFilter(settings, { project: query.project, branches: query.branches });
 
 		const [heartbeats, after, projects] = await Promise.all([
-			mongoHeartbeatService.findInRange(userId, start, end, extraFilter) as Promise<EngineHeartbeat[]>,
-			mongoHeartbeatService.findFirstAtOrAfter(userId, end, extraFilter),
+			loadActivity(userId, start, end, extraFilter),
+			firstActivityAtOrAfter(userId, end, extraFilter),
 			mongoProjectService.find({ userId, color: { $type: 'string' } }, ['name', 'color']),
 		]);
 		const colors = new Map(projects.map((project) => [project.name, project.color ?? null]));

@@ -3,13 +3,13 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
 import { NotFoundException } from '@/lib/http/errors';
-import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summary.service';
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
-import { addDays, localDateOf, localDayBounds } from '@/lib/util/Time';
+import { localDayBounds } from '@/lib/util/Time';
 import { applyRules } from '@/server/custom-rule/custom-rule.matcher';
 import { customRuleService } from '@/server/custom-rule/custom-rule.service';
 import { machineService } from '@/server/machine/machine.service';
 import { projectService } from '@/server/project/project.service';
+import { invalidateRollups } from '@/server/stats/rollup-invalidation';
 import { userAgentService } from '@/server/user-agent/user-agent.service';
 import { userProfileService } from '@/server/user/user-profile.service';
 
@@ -157,7 +157,7 @@ class HeartbeatService {
 			time: { $gte: start, $lt: end },
 		});
 		if (!deletedCount) throw new NotFoundException('No matching heartbeats on that date');
-		await this.invalidateRollups(userId, [start]);
+		await invalidateRollups(userId, [{ from: start, until: end - 1 }]);
 	}
 
 	private async idsForDuplicates(userId: string, hashes: string[]): Promise<Map<string, string>> {
@@ -174,9 +174,9 @@ class HeartbeatService {
 
 		await Promise.all([
 			projectService.touchFromHeartbeats(userId, stored),
-			this.invalidateRollups(
+			invalidateRollups(
 				userId,
-				stored.map((heartbeat) => heartbeat.time),
+				stored.map((heartbeat) => ({ from: heartbeat.time })),
 			),
 			userProfileService.recordActivity(userId, {
 				lastHeartbeatAt: new Date(latest.time * 1000),
@@ -185,19 +185,6 @@ class HeartbeatService {
 				lastBranch: latest.branch ?? undefined,
 			}),
 		]);
-	}
-
-	/**
-	 * Drops cached day rollups a heartbeat could belong to. Rollups are per timezone, and an instant falls on the
-	 * UTC date or one day either side of it in every timezone — so those three dates cover all cached variants.
-	 */
-	private async invalidateRollups(userId: string, times: number[]): Promise<void> {
-		const dates = new Set<string>();
-		for (const time of times) {
-			const utcDate = localDateOf(time, 'UTC');
-			dates.add(addDays(utcDate, -1)).add(utcDate).add(addDays(utcDate, 1));
-		}
-		await mongoDailySummaryService.deleteMany({ userId, date: { $in: [...dates] } });
 	}
 }
 
