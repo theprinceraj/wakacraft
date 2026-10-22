@@ -1,6 +1,6 @@
 'use client';
 
-import { FolderGit2, LayoutDashboard, Lightbulb, LogOut, Settings, Target } from 'lucide-react';
+import { FolderGit2, LayoutDashboard, Lightbulb, LogOut, Settings, Target, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -23,6 +23,7 @@ const LINKS = [
 	{ href: '/projects', label: 'Projects', icon: FolderGit2 },
 	{ href: '/goals', label: 'Goals', icon: Target },
 	{ href: '/insights', label: 'Insights', icon: Lightbulb },
+	{ href: '/leaderboards', label: 'Leaderboards', icon: Trophy },
 	{ href: '/settings', label: 'Settings', icon: Settings },
 ];
 

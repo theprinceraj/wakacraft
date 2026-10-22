@@ -41,6 +41,27 @@ export {
 	type IPartialHeartbeatZodSchema,
 } from './heartbeat.dto';
 export {
+	LeaderboardCacheZodSchema,
+	type ILeaderboardCacheZodSchema,
+	type ILeaderboardCacheZodSchemaInput,
+	PartialLeaderboardCacheZodSchema,
+	type IPartialLeaderboardCacheZodSchema,
+} from './leaderboard-cache.dto';
+export {
+	LeaderboardMemberZodSchema,
+	type ILeaderboardMemberZodSchema,
+	type ILeaderboardMemberZodSchemaInput,
+	PartialLeaderboardMemberZodSchema,
+	type IPartialLeaderboardMemberZodSchema,
+} from './leaderboard-member.dto';
+export {
+	LeaderboardZodSchema,
+	type ILeaderboardZodSchema,
+	type ILeaderboardZodSchemaInput,
+	PartialLeaderboardZodSchema,
+	type IPartialLeaderboardZodSchema,
+} from './leaderboard.dto';
+export {
 	MachineZodSchema,
 	type IMachineZodSchema,
 	type IMachineZodSchemaInput,
