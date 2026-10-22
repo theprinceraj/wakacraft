@@ -21,6 +21,7 @@ export * from './schemas/rollup-invalidation.schema';
 export * from './schemas/rule-job.schema';
 export * from './schemas/user-agent.schema';
 export * from './schemas/user-profile.schema';
+export * from './schemas/wakatime-import.schema';
 
 // connection
 export * from './connection';
@@ -48,6 +49,7 @@ export * from './rollup-invalidation/rollup-invalidation.service';
 export * from './rule-job/rule-job.service';
 export * from './user-agent/user-agent.service';
 export * from './user-profile/user-profile.service';
+export * from './wakatime-import/wakatime-import.service';
 
 // types
 export * from './zod';

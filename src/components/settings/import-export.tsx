@@ -111,7 +111,7 @@ export function ImportExport() {
 			</div>
 
 			<div className="flex flex-col gap-2">
-				<p className="text-sm font-medium">Import from WakaTime</p>
+				<p className="text-sm font-medium">Import a WakaTime export</p>
 				<p className="text-xs text-muted-foreground">
 					In WakaTime, go to Settings → Account → Export and choose <em>heartbeats</em>, then upload the file here.
 					wakacraft exports work too.
@@ -139,7 +139,7 @@ export function ImportExport() {
 						: 'Choose export file'}
 				</Button>
 				{importState ? (
-					<div className="h-1 overflow-hidden rounded-full bg-white/5">
+					<div className="h-1 overflow-hidden rounded-full bg-muted">
 						<div
 							className="h-full bg-ember transition-[width]"
 							style={{ width: `${(importState.done / importState.total) * 100}%` }}

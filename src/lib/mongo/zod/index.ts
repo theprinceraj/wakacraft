@@ -152,3 +152,10 @@ export {
 	PartialUserProfileZodSchema,
 	type IPartialUserProfileZodSchema,
 } from './user-profile.dto';
+export {
+	WakatimeImportZodSchema,
+	type IWakatimeImportZodSchema,
+	type IWakatimeImportZodSchemaInput,
+	PartialWakatimeImportZodSchema,
+	type IPartialWakatimeImportZodSchema,
+} from './wakatime-import.dto';

@@ -8,6 +8,7 @@ import { ImportExport } from '@/components/settings/import-export';
 import { PreferencesForm } from '@/components/settings/preferences-form';
 import { PublicProfileForm } from '@/components/settings/public-profile-form';
 import { ShareSnippets } from '@/components/settings/share-snippets';
+import { WakatimeImport } from '@/components/settings/wakatime-import';
 import { requireSession } from '@/lib/auth/session';
 import { getBaseUrl } from '@/lib/base-url';
 import { toApiKeyResponse } from '@/server/api-key/api-key.response.dto';
@@ -15,6 +16,7 @@ import { apiKeyService } from '@/server/api-key/api-key.service';
 import { customRuleService } from '@/server/custom-rule/custom-rule.service';
 import { projectService } from '@/server/project/project.service';
 import { userService } from '@/server/user/user.service';
+import { wakatimeImportService } from '@/server/wakatime-import/wakatime-import.service';
 
 import type { Metadata } from 'next';
 
@@ -30,12 +32,13 @@ export default function SettingsPage() {
 
 async function Settings() {
 	const session = await requireSession('/settings');
-	const [user, keys, baseUrl, rules, projects] = await Promise.all([
+	const [user, keys, baseUrl, rules, projects, wakatimeImport] = await Promise.all([
 		userService.getCurrentUser(session.user.id),
 		apiKeyService.list(session.user.id),
 		getBaseUrl(),
 		customRuleService.list(session.user.id),
 		projectService.list(session.user.id),
+		wakatimeImportService.getStatus(session.user.id),
 	]);
 	const timezones = Intl.supportedValuesOf('timeZone');
 	if (!timezones.includes(user.timezone)) timezones.unshift(user.timezone);
@@ -90,8 +93,9 @@ async function Settings() {
 			</div>
 
 			<div id="import-export" className="scroll-mt-16">
-				<Panel label="Import & export">
+				<Panel label="Import & export" bodyClassName="flex flex-col gap-6">
 					<ImportExport />
+					<WakatimeImport initial={wakatimeImport.data} />
 				</Panel>
 			</div>
 		</div>

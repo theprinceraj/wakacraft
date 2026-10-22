@@ -1,0 +1,132 @@
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+import { connectMongo } from '@/lib/mongo/connection';
+import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
+import { mongoWakatimeImportService } from '@/lib/mongo/wakatime-import/wakatime-import.service';
+import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
+import { wakatimeImportService } from '@/server/wakatime-import/wakatime-import.service';
+
+import { CLI_USER_AGENT } from './api';
+import { signUpTestUser } from './users';
+
+import type { IWakatimeImportZodSchema } from '@/lib/mongo/zod';
+
+const GOOD_KEY = 'waka_00000000-0000-4000-8000-000000000001';
+const days = [-6, -5, -4].map((offset) => addDays(todayIn('UTC'), offset));
+let userId: string;
+let rateLimitedOnce = false;
+/** Makes every heartbeats request rate limited, so a job stays running. */
+let alwaysLimited = false;
+const requested: string[] = [];
+
+const heartbeatsFor = (date: string, count: number) =>
+	Array.from({ length: count }, (_, index) => ({
+		id: `${date}-${index}`,
+		entity: '/home/me/app/src/index.ts',
+		type: 'file',
+		category: 'coding',
+		project: 'imported-app',
+		language: 'TypeScript',
+		is_write: false,
+		time: localDayBounds(date, 'UTC').start + 10 * 3600 + index * 60,
+		user_agent_id: 'ua-1',
+		machine_name_id: 'm-1',
+	}));
+
+function fakeWakatime(input: string | URL | Request, init?: RequestInit) {
+	const url = new URL(String(input));
+	requested.push(url.pathname + url.search);
+	const auth = new Headers(init?.headers).get('authorization');
+	const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+		Promise.resolve(new Response(JSON.stringify(body), { status, headers }));
+	if (auth !== `Basic ${Buffer.from(GOOD_KEY).toString('base64')}`) return json({ error: 'Unauthorized' }, 401);
+
+	switch (url.pathname) {
+		case '/api/v1/users/current/all_time_since_today':
+			return json({ data: { range: { start_date: days[0], end_date: days[2] } } });
+		case '/api/v1/users/current/user_agents':
+			return json({ data: [{ id: 'ua-1', value: CLI_USER_AGENT }] });
+		case '/api/v1/users/current/machine_names':
+			return json({ data: [{ id: 'm-1', name: 'workstation', value: 'workstation' }], total_pages: 1 });
+		case '/api/v1/users/current/heartbeats': {
+			const date = url.searchParams.get('date')!;
+			if (alwaysLimited || (date === days[1] && !rateLimitedOnce)) {
+				rateLimitedOnce = true;
+				return json({ error: 'Too many requests' }, 429, { 'retry-after': '30' });
+			}
+			return json({
+				data: date === days[0] ? heartbeatsFor(date, 11) : date === days[1] ? heartbeatsFor(date, 6) : [],
+			});
+		}
+		default:
+			return json({ error: 'Not found' }, 404);
+	}
+}
+
+const latest = async () => (await wakatimeImportService.getStatus(userId)).data!;
+/** Jobs with their select:false `apiKey` included. */
+const jobsWithKey = async (filter: Record<string, unknown>) =>
+	(await mongoWakatimeImportService.find(filter, '+apiKey', { sort: { createdAt: -1 } })) as IWakatimeImportZodSchema[];
+
+beforeAll(async () => {
+	await connectMongo();
+	vi.stubGlobal('fetch', vi.fn(fakeWakatime));
+	({
+		user: { id: userId },
+	} = await signUpTestUser({ body: { email: 'wakatime-import@wakacraft.test', name: 'Importer' } }));
+});
+
+afterAll(async () => {
+	vi.unstubAllGlobals();
+	await (await connectMongo()).disconnect();
+});
+
+describe('import from wakatime.com', () => {
+	it('refuses a key WakaTime rejects', async () => {
+		await expect(wakatimeImportService.start(userId, 'waka_not-a-real-key-at-all-000')).rejects.toThrow(/rejected/);
+	});
+
+	it('imports day by day and waits out a rate limit', async () => {
+		const { data } = await wakatimeImportService.start(userId, GOOD_KEY);
+		expect(data).toMatchObject({ status: 'running', start_date: days[0], days_total: 3 });
+		await expect(wakatimeImportService.start(userId, GOOD_KEY)).rejects.toThrow(/already running/);
+
+		// The first run gets day one, then WakaTime rate limits day two.
+		await vi.waitFor(async () => expect((await latest()).waiting_until).not.toBeNull());
+		expect(await latest()).toMatchObject({ status: 'running', days_done: 1, cursor: days[1], heartbeats_imported: 11 });
+
+		// Once the wait is over, the next poll resumes from the same day and finishes.
+		await mongoWakatimeImportService.updateOne({ userId, status: 'running' }, { $set: { retryAt: new Date(0) } });
+		await vi.waitFor(async () => expect((await latest()).status).toBe('done'));
+		expect(await latest()).toMatchObject({ days_done: 3, heartbeats_imported: 17, percent: 100 });
+		expect(requested.filter((path) => path.includes(`date=${days[1]}`))).toHaveLength(2);
+	});
+
+	it('keeps the editor and machine, and forgets the key when done', async () => {
+		const [heartbeat] = await mongoHeartbeatService.find({ userId, project: 'imported-app' }, '', { limit: 1 });
+		expect(heartbeat).toMatchObject({ editor: 'VS Code', machine: 'workstation' });
+		const [job] = await jobsWithKey({ userId });
+		expect(job.apiKey).toBeUndefined();
+	});
+
+	it('stores the key encrypted and can be cancelled', async () => {
+		alwaysLimited = true;
+		await wakatimeImportService.start(userId, GOOD_KEY);
+		await vi.waitFor(async () => expect((await latest()).waiting_until).not.toBeNull());
+		const [job] = await jobsWithKey({ userId, status: 'running' });
+		expect(job.apiKey).toBeTruthy();
+		expect(job.apiKey).not.toContain(GOOD_KEY);
+
+		expect((await wakatimeImportService.cancel(userId)).data.status).toBe('cancelled');
+		const [cancelled] = await jobsWithKey({ id: job.id });
+		expect(cancelled.apiKey).toBeUndefined();
+		await expect(wakatimeImportService.cancel(userId)).rejects.toThrow(/No import/);
+		alwaysLimited = false;
+	});
+
+	it('re-importing the same history adds nothing', async () => {
+		await wakatimeImportService.start(userId, GOOD_KEY);
+		await vi.waitFor(async () => expect((await latest()).status).toBe('done'));
+		expect(await mongoHeartbeatService.count({ userId })).toBe(17);
+	});
+});
