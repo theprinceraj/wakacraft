@@ -143,6 +143,7 @@ async function Project({ params, searchParams }: PageProps<'/projects/[name]'>) 
 						projectId={project.id}
 						color={project.color ?? null}
 						repository={project.repository ?? null}
+						isPublic={project.hasPublicUrl}
 					/>
 				</Panel>
 			</div>

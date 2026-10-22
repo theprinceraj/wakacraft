@@ -19,6 +19,10 @@ class UserProfileService {
 		return (await mongoUserProfileService.findOne({ userId })) ?? this.ensureProfile(userId);
 	}
 
+	public async findByUsername(username: string): Promise<IUserProfileZodSchema | null> {
+		return mongoUserProfileService.findOne({ username: username.toLowerCase() });
+	}
+
 	public async updateSettings(userId: string, input: UpdateSettingsInput): Promise<IUserProfileZodSchema> {
 		await this.ensureProfile(userId);
 		const profile = await mongoUserProfileService.updateOne({ userId }, { $set: input });

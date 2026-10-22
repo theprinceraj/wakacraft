@@ -4,7 +4,7 @@ import { z, type ZodType } from 'zod';
 import { connectMongo } from '@/lib/mongo/connection';
 
 import { resolveCaller, type Caller } from './authenticate';
-import { ForbiddenException, HttpError, UnauthorizedException } from './errors';
+import { ForbiddenException, HttpError, NotFoundException, UnauthorizedException } from './errors';
 
 type AuthMode = 'required' | 'session' | 'optional' | 'none';
 
@@ -126,6 +126,25 @@ export function route<
 
 /** `:user` path segment: `current`, or the caller's own id/username. Other users' data comes later via public profiles. */
 export const UserParamSchema = z.object({ user: z.string().min(1) });
+
+/**
+ * `:user` for endpoints that also serve other users' public data: the caller themselves (full access), or another
+ * user found by username (public view). Ids of other users are not resolvable, only public usernames.
+ */
+export async function resolveUser(
+	userParam: string,
+	caller: Caller | null,
+): Promise<{ userId: string; isSelf: true } | { userId: string; isSelf: false; username: string }> {
+	if (caller && (userParam === 'current' || userParam === caller.userId))
+		return { userId: caller.userId, isSelf: true };
+	if (userParam === 'current') throw new UnauthorizedException();
+
+	const { userProfileService } = await import('@/server/user/user-profile.service');
+	const profile = await userProfileService.findByUsername(userParam);
+	if (!profile?.username) throw new NotFoundException('User not found');
+	if (caller && profile.userId === caller.userId) return { userId: caller.userId, isSelf: true };
+	return { userId: profile.userId, isSelf: false, username: profile.username };
+}
 
 export async function requireSelf(userParam: string, caller: Caller): Promise<string> {
 	if (userParam === 'current' || userParam === caller.userId) return caller.userId;

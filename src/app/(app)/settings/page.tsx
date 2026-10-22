@@ -6,6 +6,7 @@ import { ApiKeys } from '@/components/settings/api-keys';
 import { CustomRulesEditor } from '@/components/settings/custom-rules-editor';
 import { ImportExport } from '@/components/settings/import-export';
 import { PreferencesForm } from '@/components/settings/preferences-form';
+import { PublicProfileForm } from '@/components/settings/public-profile-form';
 import { requireSession } from '@/lib/auth/session';
 import { getBaseUrl } from '@/lib/base-url';
 import { toApiKeyResponse } from '@/server/api-key/api-key.response.dto';
@@ -62,6 +63,12 @@ async function Settings() {
 					timezones={timezones}
 				/>
 			</Panel>
+
+			<div id="public-profile" className="scroll-mt-16">
+				<Panel label="Public profile">
+					<PublicProfileForm user={user} baseUrl={baseUrl} />
+				</Panel>
+			</div>
 
 			<div id="custom-rules" className="scroll-mt-16">
 				<Panel label="Custom rules">

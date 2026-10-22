@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 const SWATCHES = ['#f59e0b', '#fb923c', '#22d3ee', '#a78bfa', '#a3e635', '#f472b6', '#2dd4bf', '#94a3b8'];
 
@@ -14,13 +15,15 @@ export function ProjectSettings({
 	projectId,
 	color,
 	repository,
+	isPublic,
 }: {
 	projectId: string;
 	color: string | null;
 	repository: string | null;
+	isPublic: boolean;
 }) {
 	const router = useRouter();
-	const [values, setValues] = useState({ color, repository: repository ?? '' });
+	const [values, setValues] = useState({ color, repository: repository ?? '', isPublic });
 	const [error, setError] = useState<string | null>(null);
 	const [pending, setPending] = useState(false);
 
@@ -30,7 +33,11 @@ export function ProjectSettings({
 		const response = await fetch(`/api/v1/users/current/projects/${projectId}`, {
 			method: 'PATCH',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ color: values.color, repository: values.repository.trim() || null }),
+			body: JSON.stringify({
+				color: values.color,
+				repository: values.repository.trim() || null,
+				hasPublicUrl: values.isPublic,
+			}),
 		});
 		setPending(false);
 		const json = await response.json();
@@ -82,6 +89,15 @@ export function ProjectSettings({
 				/>
 				{error ? <p className="text-xs text-destructive">{error}</p> : null}
 			</div>
+			<label className="flex items-start justify-between gap-3 rounded-md border p-3">
+				<span>
+					<span className="block text-sm">Show on public profile</span>
+					<span className="block text-xs text-muted-foreground">
+						Project names are private unless you list them here.
+					</span>
+				</span>
+				<Switch checked={values.isPublic} onCheckedChange={(checked) => setValues({ ...values, isPublic: checked })} />
+			</label>
 			<Button type="submit" size="sm" disabled={pending} className="self-start">
 				{pending ? 'Saving…' : 'Save'}
 			</Button>

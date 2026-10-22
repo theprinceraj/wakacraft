@@ -12,7 +12,10 @@ import type { IProjectZodSchema } from '@/lib/mongo/zod';
 const TOP_LANGUAGES = 5;
 
 export interface ProjectDetailView {
-	project: Pick<IProjectZodSchema, 'id' | 'name' | 'color' | 'repository' | 'firstHeartbeatAt' | 'lastHeartbeatAt'>;
+	project: Pick<
+		IProjectZodSchema,
+		'id' | 'name' | 'color' | 'repository' | 'hasPublicUrl' | 'firstHeartbeatAt' | 'lastHeartbeatAt'
+	>;
 	range: { slug: DashboardRangeSlug; label: string; start: string; end: string; days: number };
 	totals: {
 		seconds: number;
@@ -65,6 +68,7 @@ class ProjectDetailService {
 				name: project.name,
 				color: project.color,
 				repository: project.repository,
+				hasPublicUrl: project.hasPublicUrl,
 				firstHeartbeatAt: project.firstHeartbeatAt,
 				lastHeartbeatAt: project.lastHeartbeatAt,
 			},
