@@ -11,6 +11,10 @@ export interface ImportLookups {
 
 type Loose = Record<string, unknown>;
 
+/** Ingestion's limits on a heartbeat's dependency list (`heartbeat.request.dto.ts`). */
+const MAX_DEPENDENCIES = 500;
+const MAX_DEPENDENCY_LENGTH = 256;
+
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value : undefined);
 const integer = (value: unknown) =>
 	typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : undefined;
@@ -42,16 +46,19 @@ export function toWireHeartbeat(raw: unknown, lookups: ImportLookups): unknown {
 	return {
 		entity: heartbeat.entity,
 		type: heartbeat.type,
-		category: text(heartbeat.category),
+		// WakaTime exports and its heartbeats API title-case categories ("AI Coding"); ingestion takes wakatime-cli's lowercase.
+		category: text(heartbeat.category)?.toLowerCase(),
 		time: heartbeat.time,
 		project: text(heartbeat.project),
 		project_root_count: integer(heartbeat.project_root_count),
 		branch: text(heartbeat.branch),
 		language: text(heartbeat.language),
-		dependencies:
-			Array.isArray(heartbeat.dependencies) || typeof heartbeat.dependencies === 'string'
-				? heartbeat.dependencies
-				: undefined,
+		// Ingestion caps dependency lists; trim history to fit rather than lose the whole heartbeat.
+		dependencies: Array.isArray(heartbeat.dependencies)
+			? heartbeat.dependencies
+					.filter((dependency) => typeof dependency === 'string' && dependency.length <= MAX_DEPENDENCY_LENGTH)
+					.slice(0, MAX_DEPENDENCIES)
+			: text(heartbeat.dependencies),
 		lines: integer(heartbeat.lines),
 		lineno: integer(heartbeat.lineno),
 		cursorpos: integer(heartbeat.cursorpos),

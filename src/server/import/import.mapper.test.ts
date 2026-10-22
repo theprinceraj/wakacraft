@@ -45,6 +45,22 @@ describe('toWireHeartbeat', () => {
 		expect(wire.cursorpos).toBeUndefined();
 	});
 
+	it('lowercases the title-cased categories WakaTime exports', () => {
+		const wire = toWireHeartbeat({ ...wakatimeHeartbeat, category: 'AI Coding' }, buildLookups([], []));
+		expect(wire).toMatchObject({ category: 'ai coding' });
+	});
+
+	it('trims dependency lists to what ingestion accepts', () => {
+		const dependencies = ['ok', 'x'.repeat(300), ...Array.from({ length: 600 }, (_, index) => `dep-${index}`)];
+		const wire = toWireHeartbeat({ ...wakatimeHeartbeat, dependencies }, buildLookups([], [])) as Record<
+			string,
+			unknown
+		>;
+		expect(wire.dependencies).toHaveLength(500);
+		expect((wire.dependencies as string[])[0]).toBe('ok');
+		expect((wire.dependencies as string[]).some((dependency) => dependency.length > 256)).toBe(false);
+	});
+
 	it('uses machine_name_id as the name when the export has no machine list (wakacraft exports)', () => {
 		const wire = toWireHeartbeat({ ...wakatimeHeartbeat, machine_name_id: 'macbook' }, buildLookups([], []));
 		expect(wire).toMatchObject({ machine_name: 'macbook' });
