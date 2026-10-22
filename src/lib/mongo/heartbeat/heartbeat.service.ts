@@ -22,6 +22,11 @@ export class MongoHeartbeatService extends MongoBaseService<IHeartbeatZodSchemaI
 	 * failing the batch. wakatime-cli resends its offline queue, so duplicates are expected traffic.
 	 */
 	public async insertManyIgnoringDuplicates(docs: HeartbeatInsert[]): Promise<InsertManyResult> {
+		// Dedup is enforced by the unique dedupHash index, which Mongoose builds in the background. On a fresh database
+		// inserts could otherwise beat the index build and store duplicates (which would then break the build).
+		// After the first call this resolves immediately.
+		await this.model.init();
+
 		const prepared = docs.map((doc) => new this.model(doc));
 		const duplicateIndexes = new Set<number>();
 
