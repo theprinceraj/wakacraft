@@ -5,7 +5,6 @@ import { isValidTimezone } from '@/lib/util/Time';
 
 export const UpdateSettingsSchema = UserProfileZodSchema.pick({
 	username: true,
-	timeout: true,
 	writesOnly: true,
 	weekStartDay: true,
 	bio: true,
@@ -30,7 +29,6 @@ export const UpdateSettingsSchema = UserProfileZodSchema.pick({
 			.transform((value) => value.toLowerCase())
 			.optional(),
 		timezone: z.string().refine(isValidTimezone, 'Unknown timezone').optional(),
-		timeout: z.int().min(1).max(120).optional(),
 		weekStartDay: z.int().min(0).max(6).optional(),
 	})
 	.partial()

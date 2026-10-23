@@ -90,7 +90,6 @@ async function Settings() {
 							initial={{
 								username: user.username,
 								timezone: user.timezone,
-								timeout: user.timeout,
 								writes_only: user.writes_only,
 								week_start_day: user.week_start_day,
 							}}

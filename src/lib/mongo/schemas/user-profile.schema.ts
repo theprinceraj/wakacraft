@@ -1,6 +1,6 @@
 import { Schema, SchemaTypes } from 'mongoose';
 
-import { createSubSchema, DEFAULT_TIMEOUT_MINUTES } from '../../util/Constants';
+import { createSubSchema } from '../../util/Constants';
 import { generateFlake } from '../../util/Snowflake';
 
 import type { IUserProfileZodSchema } from '../zod';
@@ -23,8 +23,6 @@ export const UserProfileSchema = new Schema<IUserProfileZodSchema>(
 		userId: { type: SchemaTypes.String, required: true, unique: true, immutable: true },
 		username: { type: SchemaTypes.String, required: false, lowercase: true, minLength: 2, maxLength: 39 },
 		timezone: { type: SchemaTypes.String, required: true, default: 'UTC' },
-		/** Keystroke timeout in minutes. */
-		timeout: { type: SchemaTypes.Number, required: true, default: DEFAULT_TIMEOUT_MINUTES, min: 1, max: 120 },
 		writesOnly: { type: SchemaTypes.Boolean, required: true, default: false },
 		/** 0 = Sunday … 6 = Saturday. */
 		weekStartDay: { type: SchemaTypes.Number, required: true, default: 1, min: 0, max: 6 },

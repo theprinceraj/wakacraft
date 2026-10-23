@@ -15,6 +15,7 @@ import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summar
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
 import { apiKeyService } from '@/server/api-key/api-key.service';
+import { UpdateSettingsSchema } from '@/server/user/user.request.dto';
 
 import { basicAuth, call, CLI_USER_AGENT } from './api';
 import { signUpTestUser } from './users';
@@ -222,6 +223,16 @@ describe('stats endpoints', () => {
 			best_day: { date: yesterday, total_seconds: 600 },
 		});
 		expect(json.data.languages.map((l: { name: string }) => l.name)).toEqual(['TypeScript', 'CSS']);
+	});
+
+	it('keeps the keystroke timeout fixed at 15 minutes', async () => {
+		const { json } = await call(getStats, {
+			path: '/api/v1/users/current/stats/last_7_days?timezone=UTC&timeout=120',
+			params: { range: 'last_7_days' },
+			headers: basicAuth(apiKey),
+		});
+		expect(json.data.timeout).toBe(15);
+		expect(UpdateSettingsSchema.safeParse({ timeout: 120 }).success).toBe(false);
 	});
 
 	it('rejects an unknown stats range', async () => {

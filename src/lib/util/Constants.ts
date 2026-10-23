@@ -14,8 +14,11 @@ export const createSubSchema = <T>(
 export const DB_NAME =
 	process.env.MONGODB_DB ?? (process.env.NODE_ENV === 'production' ? 'wakacraft' : 'wakacraft-dev');
 
-/** WakaTime's default "keystroke timeout": the max gap between heartbeats still counted as coding. */
-export const DEFAULT_TIMEOUT_MINUTES = 15;
+/**
+ * The "keystroke timeout": the max gap between heartbeats still counted as coding. Fixed at WakaTime's default for
+ * everyone, so totals stay comparable with WakaTime and across users; a longer timeout counts breaks as coding.
+ */
+export const KEYSTROKE_TIMEOUT_MINUTES = 15;
 
 /** wakatime-cli caps a bulk request at 25 heartbeats; we accept a little headroom for other clients. */
 export const MAX_HEARTBEATS_PER_BULK = 100;
