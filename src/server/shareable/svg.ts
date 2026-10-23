@@ -76,6 +76,14 @@ export function breakdownCardSvg(
 	return card(theme, title, subtitle, Math.max(90, 52 + rows.length * 26 + 8), body);
 }
 
+/** One headline number with a muted line of context under it. */
+export function totalCardSvg(theme: Theme, title: string, subtitle: string, value: string, detail: string): string {
+	const t = THEMES[theme];
+	const body = `<text x="20" y="80" font-size="32" font-weight="700" fill="${PALETTE[0]}">${escape(value)}</text>
+<text x="20" y="104" font-size="11" fill="${t.muted}">${escape(detail)}</text>`;
+	return card(theme, title, subtitle, 124, body);
+}
+
 /** Seven daily bars with weekday labels. */
 export function activityCardSvg(
 	theme: Theme,

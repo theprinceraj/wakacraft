@@ -30,18 +30,37 @@ function Snippet({ label, preview, markdown }: { label: string; preview: string;
 	);
 }
 
+const CHART_LABELS: Record<string, string> = {
+	total: 'Lifetime total card',
+	languages: 'Languages card',
+	activity: 'Activity card',
+	editors: 'Editors card',
+};
+
 /** README embeds for the user's public charts and public projects' badges. */
 export function ShareSnippets({
 	baseUrl,
 	username,
+	languagesPublic,
+	editorsPublic,
 	publicProjects,
 }: {
 	baseUrl: string;
 	username: string;
+	languagesPublic: boolean;
+	editorsPublic: boolean;
 	publicProjects: string[];
 }) {
 	const chart = (name: string) => `${baseUrl}/share/${username}/${name}.svg`;
 	const profile = `${baseUrl}/@${username}`;
+	// A private breakdown's card is a 403, which a README shows as a broken image; don't offer it.
+	const charts = [
+		'total',
+		...(languagesPublic ? ['languages'] : []),
+		'activity',
+		...(editorsPublic ? ['editors'] : []),
+	];
+	const hidden = [!languagesPublic && 'languages', !editorsPublic && 'editors'].filter(Boolean);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -50,15 +69,21 @@ export function ShareSnippets({
 				<code className="tabular">?theme=light</code> for light backgrounds.
 			</p>
 			<div className="grid gap-3 md:grid-cols-2">
-				{['languages', 'activity', 'editors'].map((name) => (
+				{charts.map((name) => (
 					<Snippet
 						key={name}
-						label={`${name[0].toUpperCase()}${name.slice(1)} card`}
+						label={CHART_LABELS[name]}
 						preview={chart(name)}
 						markdown={`[![wakacraft ${name}](${chart(name)})](${profile})`}
 					/>
 				))}
 			</div>
+			{hidden.length ? (
+				<p className="text-xs text-muted-foreground">
+					Make your {hidden.join(' and ')} public under Public profile to embed{' '}
+					{hidden.length > 1 ? 'their cards' : 'its card'}.
+				</p>
+			) : null}
 			{publicProjects.length ? (
 				<div className="grid gap-3 md:grid-cols-2">
 					{publicProjects.map((project) => {

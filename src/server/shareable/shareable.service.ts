@@ -1,12 +1,13 @@
 import { ForbiddenException, NotFoundException } from '@/lib/http/errors';
 import { mongoProjectService } from '@/lib/mongo/project/project.service';
-import { formatDuration } from '@/lib/format';
+import { formatDay, formatDuration } from '@/lib/format';
+import { humanizeSeconds } from '@/lib/util/Time';
 import { statsService } from '@/server/stats/stats.service';
 import { publicProfileService } from '@/server/user/public-profile.service';
 
-import { activityCardSvg, badgeSvg, breakdownCardSvg, type Theme } from './svg';
+import { activityCardSvg, badgeSvg, breakdownCardSvg, totalCardSvg, type Theme } from './svg';
 
-export const ShareCharts = ['languages', 'editors', 'activity'] as const;
+export const ShareCharts = ['total', 'languages', 'editors', 'activity'] as const;
 export type ShareChart = (typeof ShareCharts)[number];
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -27,8 +28,27 @@ class ShareableService {
 		return badgeSvg('wakacraft', data.text);
 	}
 
-	/** Last-7-days chart data, through the same privacy rules as the public profile. */
+	/** All-time total, shown only when the user's logged time is public. */
+	private async totalData(username: string) {
+		const profile = await publicProfileService.getProfile(username);
+		if (!profile.loggedTimePublic) throw new ForbiddenException("This user's coding activity is private");
+		const { data } = await statsService.getAllTimeSinceToday(profile.userId);
+		return {
+			username: profile.username!,
+			title: 'Lifetime coding time',
+			total: data.text,
+			totalSeconds: data.total_seconds,
+			since: data.range.start_date,
+			dailyAverage: data.daily_average,
+		};
+	}
+
+	/** Chart data (last 7 days, or all time for `total`), through the same privacy rules as the public profile. */
 	public async chartData(username: string, chart: ShareChart) {
+		return chart === 'total' ? this.totalData(username) : this.weekData(username, chart);
+	}
+
+	private async weekData(username: string, chart: Exclude<ShareChart, 'total'>) {
 		const profile = await publicProfileService.getProfile(username);
 		const { data: stats } = await publicProfileService.getPublicStats(profile.userId, 'last_7_days', {});
 
@@ -66,7 +86,19 @@ class ShareableService {
 	}
 
 	public async chartSvg(username: string, chart: ShareChart, theme: Theme): Promise<string> {
-		const data = await this.chartData(username, chart);
+		if (chart === 'total') {
+			const data = await this.totalData(username);
+			const hours = Math.floor(data.totalSeconds / 3600);
+			const minutes = Math.floor((data.totalSeconds % 3600) / 60);
+			return totalCardSvg(
+				theme,
+				data.title,
+				`@${data.username}`,
+				`${hours.toLocaleString('en-US')} hrs ${minutes} mins`,
+				`since ${formatDay(data.since, { month: 'short', day: 'numeric', year: 'numeric' })} · ${humanizeSeconds(data.dailyAverage)} daily average`,
+			);
+		}
+		const data = await this.weekData(username, chart);
 		const subtitle = `@${data.username} · last 7 days · ${data.total}`;
 		if (data.days) {
 			const days = data.days.map((day) => ({ ...day, text: `${day.label}: ${formatDuration(day.seconds)}` }));

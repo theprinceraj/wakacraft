@@ -18,7 +18,7 @@ const QuerySchema = z.object({ theme: z.enum(['dark', 'light']).default('dark') 
 
 const CACHE = 'public, max-age=600';
 
-/** Embeddable last-7-days charts: `/share/<username>/languages.svg`, `editors.json`, `activity.svg`, … */
+/** Embeddable charts: `/share/<username>/total.svg` (all time), `languages.svg`, `editors.json`, `activity.svg`, … */
 export const GET = route({ auth: 'none', params: ParamsSchema, query: QuerySchema }, async ({ params, query }) => {
 	const { chart, format } = params.chart;
 	if (format === 'json') {
