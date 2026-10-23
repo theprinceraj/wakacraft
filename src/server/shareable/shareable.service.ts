@@ -6,8 +6,12 @@ import { publicProfileService } from '@/server/user/public-profile.service';
 
 import { activityCardSvg, badgeSvg, breakdownCardSvg, type Theme } from './svg';
 
-export const ShareCharts = ['languages', 'editors', 'activity'] as const;
+export const ShareCharts = ['total', 'languages', 'editors', 'activity'] as const;
 export type ShareChart = (typeof ShareCharts)[number];
+
+/** Badge value as WakaTime writes it: `1,734 hrs 38 mins`. */
+const badgeDuration = (seconds: number) =>
+	`${Math.floor(seconds / 3600).toLocaleString('en-US')} hrs ${Math.floor((seconds % 3600) / 60)} mins`;
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -24,11 +28,30 @@ class ShareableService {
 		]);
 		if (!project?.hasPublicUrl) throw new NotFoundException('Project not found');
 		const { data } = await statsService.getAllTimeSinceToday(profile.userId, project.name);
-		return badgeSvg('wakacraft', data.text);
+		return badgeSvg('wakacraft', badgeDuration(data.total_seconds));
 	}
 
-	/** Last-7-days chart data, through the same privacy rules as the public profile. */
+	/** All-time total, shown only when the user's logged time is public. */
+	private async totalData(username: string) {
+		const profile = await publicProfileService.getProfile(username);
+		if (!profile.loggedTimePublic) throw new ForbiddenException("This user's coding activity is private");
+		const { data } = await statsService.getAllTimeSinceToday(profile.userId);
+		return {
+			username: profile.username!,
+			title: 'Lifetime coding time',
+			total: data.text,
+			totalSeconds: data.total_seconds,
+			since: data.range.start_date,
+			dailyAverage: data.daily_average,
+		};
+	}
+
+	/** Chart data (last 7 days, or all time for `total`), through the same privacy rules as the public profile. */
 	public async chartData(username: string, chart: ShareChart) {
+		return chart === 'total' ? this.totalData(username) : this.weekData(username, chart);
+	}
+
+	private async weekData(username: string, chart: Exclude<ShareChart, 'total'>) {
 		const profile = await publicProfileService.getProfile(username);
 		const { data: stats } = await publicProfileService.getPublicStats(profile.userId, 'last_7_days', {});
 
@@ -66,7 +89,8 @@ class ShareableService {
 	}
 
 	public async chartSvg(username: string, chart: ShareChart, theme: Theme): Promise<string> {
-		const data = await this.chartData(username, chart);
+		if (chart === 'total') return badgeSvg('wakacraft', badgeDuration((await this.totalData(username)).totalSeconds));
+		const data = await this.weekData(username, chart);
 		const subtitle = `@${data.username} · last 7 days · ${data.total}`;
 		if (data.days) {
 			const days = data.days.map((day) => ({ ...day, text: `${day.label}: ${formatDuration(day.seconds)}` }));

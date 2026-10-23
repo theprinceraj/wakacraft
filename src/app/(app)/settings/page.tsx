@@ -110,6 +110,8 @@ async function Settings() {
 							<ShareSnippets
 								baseUrl={baseUrl}
 								username={user.username}
+								languagesPublic={user.languages_used_public}
+								editorsPublic={user.editors_used_public}
 								publicProjects={projects.filter((project) => project.hasPublicUrl).map((project) => project.name)}
 							/>
 						</Panel>
