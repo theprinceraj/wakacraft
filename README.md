@@ -5,7 +5,7 @@ so **every WakaTime editor plugin works with it unchanged**. Point the plugin at
 
 Every feature is free, with nothing behind a paid plan: dashboards, goals, insights, public profiles, leaderboards,
 teams, invoices, and imports of your full history from WakaTime. Use the hosted instance at
-[wakacraft.theprinceraj.in](https://wakacraft.theprinceraj.in) or run your own.
+[wakacraft.tech](https://wakacraft.tech) or run your own.
 
 Next.js 16 · TypeScript · MongoDB (Mongoose) · Zod · Better Auth · Tailwind + shadcn/ui
 
