@@ -31,7 +31,7 @@ function Snippet({ label, preview, markdown }: { label: string; preview: string;
 }
 
 const CHART_LABELS: Record<string, string> = {
-	total: 'Lifetime total card',
+	total: 'Lifetime total badge',
 	languages: 'Languages card',
 	activity: 'Activity card',
 	editors: 'Editors card',

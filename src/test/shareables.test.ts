@@ -87,12 +87,11 @@ describe('share charts', () => {
 		expect(data.days.find((entry: { date: string }) => entry.date === day).seconds).toBe(3600);
 	});
 
-	it('renders a lifetime total card', async () => {
+	it('renders a lifetime total badge', async () => {
 		const card = await share('sharer', 'total.svg');
 		expect(card.status).toBe(200);
 		expect(card.type).toContain('image/svg+xml');
-		expect(card.body).toContain('Lifetime coding time');
-		expect(card.body).toContain('1 hrs 0 mins');
+		expect(card.body).toContain('wakacraft: 1 hrs 0 mins');
 		const { data } = JSON.parse((await share('sharer', 'total.json')).body);
 		expect(data).toMatchObject({ totalSeconds: 3600, since: day });
 	});

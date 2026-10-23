@@ -9,25 +9,57 @@ export const escape = (value: string) =>
 		(char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[char]!,
 	);
 
-/** Rough width of 11px Verdana text, enough to size a badge without a font engine. */
-const textWidth = (text: string) =>
-	Math.ceil(
-		[...text].reduce((sum, char) => sum + (/[il.,:;|!' ]/.test(char) ? 3.5 : /[mwMW]/.test(char) ? 9.5 : 6.6), 0),
-	);
+/** Verdana advance widths at 11px for the characters that differ most from the 6.6px default. */
+const CHAR_WIDTHS: Record<string, number> = {
+	...Object.fromEntries([...'0123456789'].map((digit) => [digit, 7])),
+	' ': 3.9,
+	',': 4,
+	'.': 4,
+	':': 4.6,
+	f: 3.9,
+	i: 3,
+	j: 3.3,
+	l: 3,
+	r: 4.7,
+	t: 4.3,
+	c: 5.7,
+	s: 5.7,
+	z: 5.7,
+	m: 10.7,
+	w: 9,
+	M: 9.6,
+	W: 10.9,
+};
 
-/** Shields-style flat badge: grey label, ember value. */
+/** Width of 11px Verdana text, close enough to size a badge without a font engine. */
+const textWidth = (text: string) => Math.ceil([...text].reduce((sum, char) => sum + (CHAR_WIDTHS[char] ?? 6.6), 0));
+
+/** wakacraft's primary colour (`--primary` in light mode) in sRGB. */
+const BADGE_COLOR = '#ea6300';
+
+/** The app icon's anvil and ember (`app/icon.svg`), drawn into a 14px slot at the badge's left edge. */
+const BADGE_LOGO = `<svg x="5" y="3" width="14" height="14" viewBox="4 5 23 22"><g transform="translate(1 4) scale(1.15)"><path d="M3 9h13l-3 4H8v3h6v3H5v-3h2v-3L3 9Z" fill="#fff"/><circle cx="19.5" cy="5.5" r="2.5" fill="#ff8f31"/></g></svg>`;
+
+/** Flat badge in the style of WakaTime's (and shields.io's): logo and grey label, value on wakacraft orange. */
 export function badgeSvg(label: string, value: string): string {
-	const left = textWidth(label) + 14;
-	const right = textWidth(value) + 14;
+	const [labelWidth, valueWidth] = [textWidth(label), textWidth(value)];
+	// Logo slot (5 + 14) and a 3px gap, then the label; text is stretched to the estimated width so padding is exact.
+	const left = 22 + labelWidth + 6;
+	const right = valueWidth + 12;
 	const width = left + right;
 	const [l, v] = [escape(label), escape(value)];
+	const text = (x: number, length: number, content: string) =>
+		[`y="15" fill="#010101" fill-opacity=".3"`, `y="14"`]
+			.map((attrs) => `<text x="${x}" ${attrs} textLength="${length}" lengthAdjust="spacing">${content}</text>`)
+			.join('');
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="20" role="img" aria-label="${l}: ${v}">
 <title>${l}: ${v}</title>
 <linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient>
 <clipPath id="r"><rect width="${width}" height="20" rx="3" fill="#fff"/></clipPath>
-<g clip-path="url(#r)"><rect width="${left}" height="20" fill="#2a2d36"/><rect x="${left}" width="${right}" height="20" fill="#e8832a"/><rect width="${width}" height="20" fill="url(#s)"/></g>
-<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-<text x="${left / 2}" y="14">${l}</text><text x="${left + right / 2}" y="14">${v}</text>
+<g clip-path="url(#r)"><rect width="${left}" height="20" fill="#555"/><rect x="${left}" width="${right}" height="20" fill="${BADGE_COLOR}"/><rect width="${width}" height="20" fill="url(#s)"/></g>
+${BADGE_LOGO}
+<g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+${text(22 + labelWidth / 2, labelWidth, l)}${text(left + right / 2, valueWidth, v)}
 </g></svg>`;
 }
 
@@ -74,14 +106,6 @@ export function breakdownCardSvg(
 				.join('\n')
 		: `<text x="20" y="64" font-size="12" fill="${t.muted}">No activity in the last 7 days</text>`;
 	return card(theme, title, subtitle, Math.max(90, 52 + rows.length * 26 + 8), body);
-}
-
-/** One headline number with a muted line of context under it. */
-export function totalCardSvg(theme: Theme, title: string, subtitle: string, value: string, detail: string): string {
-	const t = THEMES[theme];
-	const body = `<text x="20" y="80" font-size="32" font-weight="700" fill="${PALETTE[0]}">${escape(value)}</text>
-<text x="20" y="104" font-size="11" fill="${t.muted}">${escape(detail)}</text>`;
-	return card(theme, title, subtitle, 124, body);
 }
 
 /** Seven daily bars with weekday labels. */

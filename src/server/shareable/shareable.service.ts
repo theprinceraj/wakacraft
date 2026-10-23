@@ -1,14 +1,17 @@
 import { ForbiddenException, NotFoundException } from '@/lib/http/errors';
 import { mongoProjectService } from '@/lib/mongo/project/project.service';
-import { formatDay, formatDuration } from '@/lib/format';
-import { humanizeSeconds } from '@/lib/util/Time';
+import { formatDuration } from '@/lib/format';
 import { statsService } from '@/server/stats/stats.service';
 import { publicProfileService } from '@/server/user/public-profile.service';
 
-import { activityCardSvg, badgeSvg, breakdownCardSvg, totalCardSvg, type Theme } from './svg';
+import { activityCardSvg, badgeSvg, breakdownCardSvg, type Theme } from './svg';
 
 export const ShareCharts = ['total', 'languages', 'editors', 'activity'] as const;
 export type ShareChart = (typeof ShareCharts)[number];
+
+/** Badge value as WakaTime writes it: `1,734 hrs 38 mins`. */
+const badgeDuration = (seconds: number) =>
+	`${Math.floor(seconds / 3600).toLocaleString('en-US')} hrs ${Math.floor((seconds % 3600) / 60)} mins`;
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -25,7 +28,7 @@ class ShareableService {
 		]);
 		if (!project?.hasPublicUrl) throw new NotFoundException('Project not found');
 		const { data } = await statsService.getAllTimeSinceToday(profile.userId, project.name);
-		return badgeSvg('wakacraft', data.text);
+		return badgeSvg('wakacraft', badgeDuration(data.total_seconds));
 	}
 
 	/** All-time total, shown only when the user's logged time is public. */
@@ -86,18 +89,7 @@ class ShareableService {
 	}
 
 	public async chartSvg(username: string, chart: ShareChart, theme: Theme): Promise<string> {
-		if (chart === 'total') {
-			const data = await this.totalData(username);
-			const hours = Math.floor(data.totalSeconds / 3600);
-			const minutes = Math.floor((data.totalSeconds % 3600) / 60);
-			return totalCardSvg(
-				theme,
-				data.title,
-				`@${data.username}`,
-				`${hours.toLocaleString('en-US')} hrs ${minutes} mins`,
-				`since ${formatDay(data.since, { month: 'short', day: 'numeric', year: 'numeric' })} · ${humanizeSeconds(data.dailyAverage)} daily average`,
-			);
-		}
+		if (chart === 'total') return badgeSvg('wakacraft', badgeDuration((await this.totalData(username)).totalSeconds));
 		const data = await this.weekData(username, chart);
 		const subtitle = `@${data.username} · last 7 days · ${data.total}`;
 		if (data.days) {

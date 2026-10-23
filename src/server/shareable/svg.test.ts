@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { activityCardSvg, badgeSvg, breakdownCardSvg, escape, totalCardSvg } from './svg';
+import { activityCardSvg, badgeSvg, breakdownCardSvg, escape } from './svg';
 
 describe('svg', () => {
 	it('escapes markup in user-provided text', () => {
@@ -21,12 +21,6 @@ describe('svg', () => {
 		const items = Array.from({ length: 9 }, (_, index) => ({ name: `Lang ${index}`, text: '1 hr', percent: 10 }));
 		expect(breakdownCardSvg('dark', 'Languages', 'Last 7 days', items).match(/Lang \d/g)).toHaveLength(6);
 		expect(breakdownCardSvg('light', 'Languages', 'Last 7 days', [])).toContain('No activity');
-	});
-
-	it('renders a total card with escaped text', () => {
-		const svg = totalCardSvg('dark', 'Lifetime coding time', '@me', '1,721 hrs 4 mins', 'since <today>');
-		expect(svg).toContain('1,721 hrs 4 mins');
-		expect(svg).toContain('since &lt;today&gt;');
 	});
 
 	it('renders one bar per day', () => {
