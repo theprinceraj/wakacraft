@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { UserProfileZodSchema, type IUserProfileZodSchema } from '@/lib/mongo/zod';
+import { KEYSTROKE_TIMEOUT_MINUTES } from '@/lib/util/Constants';
 
 /** WakaTime's `GET users/current` shape (the subset that maps onto wakacraft data), plus wakacraft settings. */
 export const UserResponseSchema = z.object({
@@ -64,7 +65,7 @@ export const toUserResponse = (profile: IUserProfileZodSchema, authUser: AuthUse
 	linkedin_username: profile.linkedinUsername ?? null,
 	city: profile.city ?? null,
 	timezone: profile.timezone,
-	timeout: profile.timeout,
+	timeout: KEYSTROKE_TIMEOUT_MINUTES,
 	writes_only: profile.writesOnly,
 	week_start_day: profile.weekStartDay,
 	is_hireable: profile.isHireable,

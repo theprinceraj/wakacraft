@@ -39,7 +39,7 @@ real activity exists: `bun run seed:demo you@example.com`.
 | --- | --- |
 | Heartbeat ingestion — `POST heartbeats`, `heartbeats.bulk` (wakatime-cli wire format, offline-queue dedup), `GET`/`DELETE` heartbeats | ✅ |
 | Auth — session, `Basic base64(api_key)`, `Bearer`, `?api_key=`; multiple hashed API keys per user | ✅ |
-| `summaries` (start/end or named ranges, project/branch filters, timeout/writes_only/timezone overrides) | ✅ |
+| `summaries` (start/end or named ranges, project/branch filters, writes_only/timezone overrides; keystroke timeout fixed at 15 min) | ✅ |
 | `durations` with every `slice_by` · `stats` and `stats/:range` · `status_bar/today` (+ `statusbar/today` used by `wakatime-cli --today`) · `all_time_since_today` | ✅ |
 | `projects`, `user_agents`, `machine_names`, `users/current` | ✅ |
 | Editor/OS detection from plugin user agents (VS Code, Cursor, JetBrains IDEs, Neovim, …) | ✅ |

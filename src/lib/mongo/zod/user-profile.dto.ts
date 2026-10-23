@@ -9,7 +9,6 @@ export const UserProfileZodSchema = z.object({
 	userId: z.string(),
 	username: z.string().min(2).max(39).nullish(),
 	timezone: z.string().default('UTC'),
-	timeout: z.number().gte(1).lte(120).default(15),
 	writesOnly: z.boolean().default(false),
 	weekStartDay: z.number().gte(0).lte(6).default(1),
 	bio: z.string().max(500).nullish(),

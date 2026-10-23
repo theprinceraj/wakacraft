@@ -23,7 +23,6 @@ const commaList = z
 
 /** Per-request overrides of the user's own settings, shared by every stats endpoint. */
 export const StatsSettingsQuerySchema = z.object({
-	timeout: z.coerce.number().int().min(1).max(120).optional(),
 	writes_only: z.stringbool().optional(),
 	timezone: z.string().refine(isValidTimezone, 'Unknown timezone').optional(),
 });

@@ -1,5 +1,6 @@
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { mongoProjectService } from '@/lib/mongo/project/project.service';
+import { KEYSTROKE_TIMEOUT_MINUTES } from '@/lib/util/Constants';
 import {
 	eachDate,
 	humanizeSeconds,
@@ -33,7 +34,7 @@ import type { DurationsQuery, StatsSettingsQuery, SummariesQuery } from './stats
 const isoAt = (epochSeconds: number) => new Date(epochSeconds * 1000).toISOString();
 
 class StatsService {
-	/** The user's settings, with any per-request overrides from the query string. */
+	/** The user's settings, with any per-request overrides from the query string. The keystroke timeout is fixed. */
 	public async resolveSettings(
 		userId: string,
 		overrides: StatsSettingsQuery = {},
@@ -41,7 +42,7 @@ class StatsService {
 		const profile = await userProfileService.getProfile(userId);
 		return {
 			timezone: overrides.timezone ?? profile.timezone,
-			timeoutMinutes: overrides.timeout ?? profile.timeout,
+			timeoutMinutes: KEYSTROKE_TIMEOUT_MINUTES,
 			writesOnly: overrides.writes_only ?? profile.writesOnly,
 			weekStartDay: profile.weekStartDay,
 			username: profile.username ?? null,

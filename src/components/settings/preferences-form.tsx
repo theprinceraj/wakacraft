@@ -13,7 +13,6 @@ import { Switch } from '@/components/ui/switch';
 interface Preferences {
 	username: string | null;
 	timezone: string;
-	timeout: number;
 	writes_only: boolean;
 	week_start_day: number;
 }
@@ -35,7 +34,6 @@ export function PreferencesForm({ initial, timezones }: { initial: Preferences; 
 			body: JSON.stringify({
 				...(values.username ? { username: values.username } : {}),
 				timezone: values.timezone,
-				timeout: values.timeout,
 				writesOnly: values.writes_only,
 				weekStartDay: values.week_start_day,
 			}),
@@ -86,21 +84,6 @@ export function PreferencesForm({ initial, timezones }: { initial: Preferences; 
 			</div>
 
 			<div className="grid grid-cols-2 gap-4">
-				<div className="grid gap-1.5">
-					<Label htmlFor="timeout" className="text-xs">
-						Keystroke timeout (minutes)
-					</Label>
-					<Input
-						id="timeout"
-						type="number"
-						min={1}
-						max={120}
-						value={values.timeout}
-						onChange={(event) => setValues({ ...values, timeout: Number(event.target.value) })}
-						className="tabular"
-					/>
-					<p className="text-xs text-muted-foreground">Gaps longer than this count as a break.</p>
-				</div>
 				<div className="grid gap-1.5">
 					<Label className="text-xs">Week starts on</Label>
 					<Select
