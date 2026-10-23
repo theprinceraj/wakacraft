@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
+import { createAuthMiddleware } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
 import { MongoClient } from 'mongodb';
 
@@ -46,6 +47,14 @@ export const auth = betterAuth({
 				},
 			},
 		},
+	},
+	hooks: {
+		// The driver closes its topology when the first, implicit connect fails (e.g. Atlas has no primary for a
+		// moment) but keeps it on the client, so every later operation throws `MongoTopologyClosedError` until the
+		// process dies. An explicit connect() is a no-op while connected and builds a fresh topology after a close.
+		before: createAuthMiddleware(async () => {
+			await client.connect();
+		}),
 	},
 	plugins: [nextCookies()],
 });
