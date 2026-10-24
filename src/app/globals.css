@@ -171,3 +171,35 @@
 		linear-gradient(to bottom, oklch(1 0 0 / 2.5%) 1px, transparent 1px);
 	background-size: 32px 32px;
 }
+
+/*
+ * The public homepage: warm cream and navy with the wakacraft orange, whatever theme the app is in. Redefining the
+ * tokens here lets shadcn components inside pick it up unchanged.
+ */
+.landing {
+	color-scheme: light;
+	--background: oklch(0.994 0.008 100);
+	--foreground: oklch(0.23 0.05 268);
+	--card: oklch(0.958 0.006 95);
+	--card-foreground: oklch(0.23 0.05 268);
+	--muted: oklch(0.958 0.006 95);
+	--muted-foreground: oklch(0.46 0.03 268);
+	--accent: oklch(0.94 0.008 95);
+	--accent-foreground: oklch(0.23 0.05 268);
+	--primary: oklch(0.66 0.19 48);
+	--primary-foreground: oklch(0.99 0 0);
+	--ember: oklch(0.66 0.19 48);
+	--border: oklch(0.23 0.05 268 / 12%);
+	--input: oklch(0.23 0.05 268 / 16%);
+	--ring: oklch(0.66 0.19 48 / 60%);
+	/* Deep navy for the few dark tiles. */
+	--ink: oklch(0.23 0.05 268);
+	--ink-foreground: oklch(0.97 0.006 95);
+	background-color: var(--background);
+	color: var(--foreground);
+}
+
+@theme inline {
+	--color-ink: var(--ink);
+	--color-ink-foreground: var(--ink-foreground);
+}
