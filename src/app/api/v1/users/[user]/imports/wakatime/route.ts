@@ -12,7 +12,7 @@ export const GET = route({ auth: 'session', params: UserParamSchema }, async ({ 
 
 export const POST = route(
 	{ auth: 'session', params: UserParamSchema, body: StartWakatimeImportSchema, status: 201 },
-	async ({ caller, params, body }) => wakatimeImportService.start(await requireSelf(params.user, caller), body.api_key),
+	async ({ caller, params, body }) => wakatimeImportService.start(await requireSelf(params.user, caller), body.token),
 );
 
 export const DELETE = route({ auth: 'session', params: UserParamSchema }, async ({ caller, params }) =>

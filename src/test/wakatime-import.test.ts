@@ -13,7 +13,7 @@ import { signUpTestUser } from './users';
 
 import type { IWakatimeImportZodSchema } from '@/lib/mongo/zod';
 
-const GOOD_KEY = 'waka_00000000-0000-4000-8000-000000000001';
+const GOOD_TOKEN = 'waat_0000000000000000000000000000000000000001';
 const MACHINE_ID = '7fdd436f-ff0a-45fd-99d3-cdeb0304d4a7';
 const days = [-6, -5, -4].map((offset) => addDays(todayIn('UTC'), offset));
 let userId: string;
@@ -43,7 +43,7 @@ function fakeWakatime(input: string | URL | Request, init?: RequestInit) {
 	const auth = new Headers(init?.headers).get('authorization');
 	const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
 		Promise.resolve(new Response(JSON.stringify(body), { status, headers }));
-	if (auth !== `Basic ${Buffer.from(GOOD_KEY).toString('base64')}`) return json({ error: 'Unauthorized' }, 401);
+	if (auth !== `Bearer ${GOOD_TOKEN}`) return json({ error: 'Unauthorized' }, 401);
 
 	switch (url.pathname) {
 		case '/api/v1/users/current/all_time_since_today':
@@ -68,9 +68,9 @@ function fakeWakatime(input: string | URL | Request, init?: RequestInit) {
 }
 
 const latest = async (user = userId) => (await wakatimeImportService.getStatus(user)).data!;
-/** Jobs with their select:false `apiKey` included. */
-const jobsWithKey = async (filter: Record<string, unknown>) =>
-	(await mongoWakatimeImportService.find(filter, '+apiKey', { sort: { createdAt: -1 } })) as IWakatimeImportZodSchema[];
+/** Jobs with their select:false `token` included. */
+const jobsWithToken = async (filter: Record<string, unknown>) =>
+	(await mongoWakatimeImportService.find(filter, '+token', { sort: { createdAt: -1 } })) as IWakatimeImportZodSchema[];
 
 beforeAll(async () => {
 	await connectMongo();
@@ -86,14 +86,24 @@ afterAll(async () => {
 });
 
 describe('import from wakatime.com', () => {
-	it('refuses a key WakaTime rejects', async () => {
-		await expect(wakatimeImportService.start(userId, 'waka_not-a-real-key-at-all-000')).rejects.toThrow(/rejected/);
+	it('refuses a token WakaTime rejects', async () => {
+		await expect(wakatimeImportService.start(userId, 'waat_not-a-real-token-at-all-000')).rejects.toThrow(
+			/rejected that token/,
+		);
+	});
+
+	it('turns away a secret API key without asking WakaTime', async () => {
+		const before = requested.length;
+		await expect(wakatimeImportService.start(userId, 'waka_00000000-0000-4000-8000-000000000001')).rejects.toThrow(
+			/personal OAuth token/,
+		);
+		expect(requested).toHaveLength(before);
 	});
 
 	it('imports day by day and waits out a rate limit', async () => {
-		const { data } = await wakatimeImportService.start(userId, GOOD_KEY);
+		const { data } = await wakatimeImportService.start(userId, GOOD_TOKEN);
 		expect(data).toMatchObject({ status: 'running', start_date: days[0], days_total: 3 });
-		await expect(wakatimeImportService.start(userId, GOOD_KEY)).rejects.toThrow(/already running/);
+		await expect(wakatimeImportService.start(userId, GOOD_TOKEN)).rejects.toThrow(/already running/);
 
 		// The first run gets day one, then WakaTime rate limits day two.
 		await vi.waitFor(async () => expect((await latest()).waiting_until).not.toBeNull());
@@ -106,30 +116,30 @@ describe('import from wakatime.com', () => {
 		expect(requested.filter((path) => path.includes(`date=${days[1]}`))).toHaveLength(2);
 	});
 
-	it('keeps the editor and machine, and forgets the key when done', async () => {
+	it('keeps the editor and machine, and forgets the token when done', async () => {
 		const [heartbeat] = await mongoHeartbeatService.find({ userId, project: 'imported-app' }, '', { limit: 1 });
 		expect(heartbeat).toMatchObject({ editor: 'VS Code', machine: 'workstation' });
-		const [job] = await jobsWithKey({ userId });
-		expect(job.apiKey).toBeUndefined();
+		const [job] = await jobsWithToken({ userId });
+		expect(job.token).toBeUndefined();
 	});
 
-	it('stores the key encrypted and can be cancelled', async () => {
+	it('stores the token encrypted and can be cancelled', async () => {
 		alwaysLimited = true;
-		await wakatimeImportService.start(userId, GOOD_KEY);
+		await wakatimeImportService.start(userId, GOOD_TOKEN);
 		await vi.waitFor(async () => expect((await latest()).waiting_until).not.toBeNull());
-		const [job] = await jobsWithKey({ userId, status: 'running' });
-		expect(job.apiKey).toBeTruthy();
-		expect(job.apiKey).not.toContain(GOOD_KEY);
+		const [job] = await jobsWithToken({ userId, status: 'running' });
+		expect(job.token).toBeTruthy();
+		expect(job.token).not.toContain(GOOD_TOKEN);
 
 		expect((await wakatimeImportService.cancel(userId)).data.status).toBe('cancelled');
-		const [cancelled] = await jobsWithKey({ id: job.id });
-		expect(cancelled.apiKey).toBeUndefined();
+		const [cancelled] = await jobsWithToken({ id: job.id });
+		expect(cancelled.token).toBeUndefined();
 		await expect(wakatimeImportService.cancel(userId)).rejects.toThrow(/No import/);
 		alwaysLimited = false;
 	});
 
 	it('re-importing the same history adds nothing', async () => {
-		await wakatimeImportService.start(userId, GOOD_KEY);
+		await wakatimeImportService.start(userId, GOOD_TOKEN);
 		await vi.waitFor(async () => expect((await latest()).status).toBe('done'));
 		expect(await mongoHeartbeatService.count({ userId })).toBe(17);
 	});
@@ -156,7 +166,7 @@ describe('export file and API import together', () => {
 		// Caches the day's rollup without an editor, which the API import must invalidate.
 		await statsService.getSummaries(fileUserId, { start: days[0], end: days[0], timezone: 'UTC' });
 
-		await wakatimeImportService.start(fileUserId, GOOD_KEY);
+		await wakatimeImportService.start(fileUserId, GOOD_TOKEN);
 		await vi.waitFor(async () => expect((await latest(fileUserId)).status).toBe('done'));
 		expect(await mongoHeartbeatService.count({ userId: fileUserId })).toBe(17);
 	});

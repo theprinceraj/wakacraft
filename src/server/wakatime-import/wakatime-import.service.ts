@@ -19,6 +19,10 @@ const BUDGET_MS = 45_000;
 const INGEST_CHUNK = 1000;
 /** When WakaTime fails without saying how long to wait. */
 const DEFAULT_RETRY_SECONDS = 60;
+/** Secret API keys carry this prefix; WakaTime stops accepting them outside editor plugins on November 1, 2026. */
+const API_KEY_PREFIX = 'waka_';
+const REJECTED_TOKEN =
+	'WakaTime rejected that token. Create a personal OAuth token at wakatime.com/oauth — your secret API key no longer works here.';
 
 const lookupList = (items: unknown[]) =>
 	items.flatMap((item) => {
@@ -49,8 +53,13 @@ function toResponse(job: IWakatimeImportZodSchema) {
 export type WakatimeImportResponse = ReturnType<typeof toResponse>;
 
 class WakatimeImportService {
-	/** Checks the key against WakaTime, records what to fetch, and starts working in the background. */
-	public async start(userId: string, apiKey: string) {
+	/** Checks the token against WakaTime, records what to fetch, and starts working in the background. */
+	public async start(userId: string, token: string) {
+		if (token.startsWith(API_KEY_PREFIX)) {
+			throw new BadRequestException(
+				'That is a WakaTime secret API key, which WakaTime only accepts from editor plugins. Create a personal OAuth token at wakatime.com/oauth instead.',
+			);
+		}
 		if (await mongoWakatimeImportService.exists({ userId, status: WakatimeImportStatuses.Running })) {
 			throw new BadRequestException('An import from WakaTime is already running');
 		}
@@ -59,11 +68,11 @@ class WakatimeImportService {
 		let userAgents: unknown[];
 		let machines: unknown[];
 		try {
-			range = await wakatimeClient.activityRange(apiKey);
-			[userAgents, machines] = await Promise.all([wakatimeClient.userAgents(apiKey), wakatimeClient.machines(apiKey)]);
+			range = await wakatimeClient.activityRange(token);
+			[userAgents, machines] = await Promise.all([wakatimeClient.userAgents(token), wakatimeClient.machines(token)]);
 		} catch (error) {
 			if (error instanceof WakatimeApiError && (error.status === 401 || error.status === 403)) {
-				throw new BadRequestException('WakaTime rejected that API key');
+				throw new BadRequestException(REJECTED_TOKEN);
 			}
 			throw new BadRequestException(error instanceof Error ? error.message : 'Could not reach WakaTime');
 		}
@@ -76,7 +85,7 @@ class WakatimeImportService {
 		const job = await mongoWakatimeImportService.create({
 			userId,
 			status: WakatimeImportStatuses.Running,
-			apiKey: encryptSecret(apiKey, SECRET_PURPOSE),
+			token: encryptSecret(token, SECRET_PURPOSE),
 			startDate: range.start,
 			endDate: end,
 			cursor: range.start,
@@ -99,7 +108,7 @@ class WakatimeImportService {
 	public async cancel(userId: string) {
 		const job = await mongoWakatimeImportService.updateOne(
 			{ userId, status: WakatimeImportStatuses.Running },
-			{ $set: { status: WakatimeImportStatuses.Cancelled, finishedAt: new Date() }, $unset: { apiKey: 1 } },
+			{ $set: { status: WakatimeImportStatuses.Cancelled, finishedAt: new Date() }, $unset: { token: 1 } },
 		);
 		if (!job) throw new BadRequestException('No import is running');
 		return { data: toResponse(job) };
@@ -125,9 +134,9 @@ class WakatimeImportService {
 	 */
 	public async pump(jobId: string): Promise<void> {
 		const job = await mongoWakatimeImportService.acquireLease(jobId, LEASE_MS);
-		if (!job?.apiKey) return;
+		if (!job?.token) return;
 
-		const apiKey = decryptSecret(job.apiKey, SECRET_PURPOSE);
+		const token = decryptSecret(job.token, SECRET_PURPOSE);
 		const lookups = buildLookups(job.userAgents, job.machines);
 		const deadline = Date.now() + BUDGET_MS;
 		let cursor = job.cursor;
@@ -135,7 +144,7 @@ class WakatimeImportService {
 		while (cursor <= job.endDate && Date.now() < deadline) {
 			let heartbeats: unknown[];
 			try {
-				heartbeats = await wakatimeClient.heartbeats(apiKey, cursor);
+				heartbeats = await wakatimeClient.heartbeats(token, cursor);
 			} catch (error) {
 				await this.handleFetchError(job, error);
 				return;
@@ -167,7 +176,7 @@ class WakatimeImportService {
 				{ id: job.id, status: WakatimeImportStatuses.Running },
 				{
 					$set: { status: WakatimeImportStatuses.Done, finishedAt: new Date() },
-					$unset: { apiKey: 1, leaseUntil: 1 },
+					$unset: { token: 1, leaseUntil: 1 },
 				},
 			);
 		} else {
@@ -182,10 +191,11 @@ class WakatimeImportService {
 				{
 					$set: {
 						status: WakatimeImportStatuses.Failed,
-						error: 'WakaTime no longer accepts the API key. Start the import again with a current key.',
+						error:
+							'WakaTime no longer accepts the token. Start the import again with a current personal OAuth token from wakatime.com/oauth.',
 						finishedAt: new Date(),
 					},
-					$unset: { apiKey: 1, leaseUntil: 1 },
+					$unset: { token: 1, leaseUntil: 1 },
 				},
 			);
 			return;

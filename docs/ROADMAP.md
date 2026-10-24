@@ -18,7 +18,7 @@ See the table in the README. Core engine rules are covered by unit tests; the wa
       background; editor in Settings
 - [x] **Import from WakaTime** — heartbeats export uploaded in batches from the browser; re-runs are deduplicated
 - [x] **Data export** — `data_dumps` (heartbeats / daily JSON), streamed on download
-- [x] **Import via WakaTime API key** — resumable leased job, one day per request; waits out rate limits; key
+- [x] **Import via WakaTime personal OAuth token** — resumable leased job, one day per request; waits out rate limits; token
       encrypted at rest and dropped when done; resumed by polling and the nightly cron
 - [x] **OAuth-only sign-in** (GitHub; Google when configured) — no passwords, so no email service is needed
 

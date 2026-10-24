@@ -15,11 +15,11 @@ export class MongoWakatimeImportService extends MongoBaseService<
 
 	/**
 	 * Takes the job's lease if it is running, free (never leased or lapsed) and not waiting out a rate limit. Returns
-	 * the job with its encrypted API key, or null when someone else holds it or there is nothing to do.
+	 * the job with its encrypted token, or null when someone else holds it or there is nothing to do.
 	 */
 	public async acquireLease(id: string, leaseMs: number): Promise<IWakatimeImportZodSchema | null> {
 		const now = new Date();
-		// `+apiKey` adds the select:false key to the full document.
+		// `+token` adds the select:false token to the full document.
 		return (await this.updateOne(
 			{
 				id,
@@ -31,7 +31,7 @@ export class MongoWakatimeImportService extends MongoBaseService<
 			},
 			{ $set: { leaseUntil: new Date(now.getTime() + leaseMs) }, $unset: { retryAt: 1 } },
 			{},
-			'+apiKey',
+			'+token',
 		)) as IWakatimeImportZodSchema | null;
 	}
 }
