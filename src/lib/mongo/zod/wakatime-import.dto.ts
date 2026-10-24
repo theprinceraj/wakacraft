@@ -8,7 +8,7 @@ export const WakatimeImportZodSchema = z.object({
 	id: z.string(),
 	userId: z.string(),
 	status: z.enum(['running', 'done', 'failed', 'cancelled']),
-	apiKey: z.string().nullish(),
+	token: z.string().nullish(),
 	startDate: z.string(),
 	endDate: z.string(),
 	cursor: z.string(),

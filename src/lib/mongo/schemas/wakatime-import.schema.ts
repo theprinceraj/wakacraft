@@ -23,8 +23,8 @@ export const WakatimeImportSchema = new Schema<IWakatimeImportZodSchema>(
 		id: { type: SchemaTypes.String, default: generateFlake, required: true, unique: true, immutable: true },
 		userId: { type: SchemaTypes.String, required: true },
 		status: { type: SchemaTypes.String, enum: WakatimeImportStatusesList, required: true },
-		/** The WakaTime API key, encrypted at rest; removed once the job ends. */
-		apiKey: { type: SchemaTypes.String, required: false, select: false },
+		/** The WakaTime personal OAuth token, encrypted at rest; removed once the job ends. */
+		token: { type: SchemaTypes.String, required: false, select: false },
 		startDate: { type: SchemaTypes.String, required: true },
 		endDate: { type: SchemaTypes.String, required: true },
 		cursor: { type: SchemaTypes.String, required: true },
