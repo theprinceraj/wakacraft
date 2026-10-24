@@ -72,7 +72,7 @@ export function AppNav({ user }: { user: { name: string; email: string; image?: 
 	return (
 		<header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-md">
 			<div className="mx-auto flex h-12 max-w-[1440px] items-center gap-6 px-4">
-				<Link href="/dashboard" className="text-foreground">
+				<Link href="/" className="text-foreground">
 					<Logo />
 				</Link>
 				<nav className="flex items-center gap-0.5">

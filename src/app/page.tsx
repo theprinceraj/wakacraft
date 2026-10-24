@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 
 import { Logo } from '@/components/app/logo';
-import { RedirectIfSignedIn } from '@/components/app/redirect-if-signed-in';
+import { SignedInSwitch } from '@/components/app/signed-in-switch';
 import { Button } from '@/components/ui/button';
 
 const FEATURES = [
@@ -14,24 +14,42 @@ const FEATURES = [
 
 const REPO_URL = 'https://github.com/theprinceraj/wakacraft';
 
+const headerSignedOut = (
+	<>
+		<Button variant="ghost" asChild>
+			<Link href="/login">Sign in</Link>
+		</Button>
+		<Button asChild>
+			<Link href="/login">Get started</Link>
+		</Button>
+	</>
+);
+
+const ctaSignedOut = (
+	<Button size="lg" asChild>
+		<Link href="/login">Start tracking free</Link>
+	</Button>
+);
+
 export default function HomePage() {
 	return (
 		<div className="canvas-grid flex min-h-full flex-1 flex-col">
-			<Suspense>
-				<RedirectIfSignedIn />
-			</Suspense>
 			<header className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4">
 				<Logo />
 				<div className="flex items-center gap-2">
 					<Button variant="ghost" className="max-sm:hidden" asChild>
 						<a href={REPO_URL}>GitHub</a>
 					</Button>
-					<Button variant="ghost" asChild>
-						<Link href="/login">Sign in</Link>
-					</Button>
-					<Button asChild>
-						<Link href="/login">Get started</Link>
-					</Button>
+					<Suspense fallback={headerSignedOut}>
+						<SignedInSwitch
+							signedIn={
+								<Button asChild>
+									<Link href="/dashboard">Open dashboard</Link>
+								</Button>
+							}
+							signedOut={headerSignedOut}
+						/>
+					</Suspense>
 				</div>
 			</header>
 			<main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center gap-14 px-4 py-20">
@@ -47,9 +65,16 @@ export default function HomePage() {
 						plugin with one line of config. Every feature is free, and you can self-host it.
 					</p>
 					<div className="mt-8 flex gap-3">
-						<Button size="lg" asChild>
-							<Link href="/login">Start tracking free</Link>
-						</Button>
+						<Suspense fallback={ctaSignedOut}>
+							<SignedInSwitch
+								signedIn={
+									<Button size="lg" asChild>
+										<Link href="/dashboard">Go to your dashboard</Link>
+									</Button>
+								}
+								signedOut={ctaSignedOut}
+							/>
+						</Suspense>
 						<Button size="lg" variant="outline" asChild>
 							<a href={REPO_URL}>View source</a>
 						</Button>
