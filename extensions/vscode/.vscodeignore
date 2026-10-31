@@ -1,0 +1,8 @@
+src/**
+**/*.map
+tsconfig.json
+node_modules/**
+*.vsix
+.omc/**
+.gitignore
+bun.lock
