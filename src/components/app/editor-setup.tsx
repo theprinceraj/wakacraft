@@ -19,7 +19,7 @@ export function EditorSetup({ apiUrl, apiKey }: { apiUrl: string; apiKey?: strin
 		{
 			lsp: {
 				wakacraft: {
-					initialization_options: { 'api-key': key, ...(isDefaultServer(apiUrl) ? {} : { 'api-url': apiUrl }) },
+					settings: { 'api-key': key, ...(isDefaultServer(apiUrl) ? {} : { 'api-url': apiUrl }) },
 				},
 			},
 		},

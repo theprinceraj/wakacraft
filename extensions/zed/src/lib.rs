@@ -20,6 +20,8 @@ use zed_extension_api::{
 
 const SERVER_ID: &str = "wakacraft";
 const DEFAULT_API_URL: &str = "https://wakacraft.tech/api/v1";
+/// Pinned: the extension depends on this release's command line (see `language_server_command`).
+const WAKATIME_LS_TAG: &str = "v0.1.10";
 
 struct WakacraftExtension {
     cached_ls_binary_path: Option<PathBuf>,
@@ -122,18 +124,41 @@ impl WakacraftExtension {
         })
     }
 
-    /// Downloads the latest release of `binary` from `repo` into the extension's work directory, removing older
-    /// versions.
-    fn download(server_id: &LanguageServerId, binary: &str, repo: &str) -> Result<PathBuf> {
-        let release = zed::latest_github_release(
-            repo,
-            zed::GithubReleaseOptions {
-                require_assets: true,
-                pre_release: false,
-            },
-        )?;
-
+    /// Downloads `binary` from `repo` (the release tagged `tag`, or the latest) into the extension's work
+    /// directory, removing older versions. When GitHub can't be reached (offline, rate limited), an
+    /// already-downloaded version is used instead, so tracking still starts and heartbeats reach the offline queue.
+    fn download(
+        server_id: &LanguageServerId,
+        binary: &str,
+        repo: &str,
+        tag: Option<&str>,
+    ) -> Result<PathBuf> {
         let asset_name = Self::asset_name(binary)?;
+        // wakatime-cli's zip holds `wakatime-cli-<os>-<arch>`; wakatime-ls's holds `wakatime-ls`.
+        let file_name = if binary == "wakatime-cli" {
+            executable_name(&asset_name)
+        } else {
+            executable_name(binary)
+        };
+
+        let release = match tag {
+            Some(tag) => zed::github_release_by_tag_name(repo, tag),
+            None => zed::latest_github_release(
+                repo,
+                zed::GithubReleaseOptions {
+                    require_assets: true,
+                    pre_release: false,
+                },
+            ),
+        };
+        let release = match release {
+            Ok(release) => release,
+            Err(err) => {
+                return Self::installed(binary, &file_name)
+                    .ok_or_else(|| format!("failed to look up {repo} releases: {err}"))
+            }
+        };
+
         let asset = release
             .assets
             .iter()
@@ -141,25 +166,21 @@ impl WakacraftExtension {
             .ok_or_else(|| format!("no {asset_name}.zip in {repo} {}", release.version))?;
 
         let version_dir = format!("{binary}-{}", release.version);
-        // wakatime-cli's zip holds `wakatime-cli-<os>-<arch>`; wakatime-ls's holds `wakatime-ls`.
-        let file_name = if binary == "wakatime-cli" {
-            executable_name(&asset_name)
-        } else {
-            executable_name(binary)
-        };
-        let binary_path = Path::new(&version_dir).join(file_name);
+        let binary_path = Path::new(&version_dir).join(&file_name);
 
         if !fs::metadata(&binary_path).is_ok_and(|stat| stat.is_file()) {
             zed::set_language_server_installation_status(
                 server_id,
                 &zed::LanguageServerInstallationStatus::Downloading,
             );
-            zed::download_file(
+            if let Err(err) = zed::download_file(
                 &asset.download_url,
                 &version_dir,
                 zed::DownloadedFileType::Zip,
-            )
-            .map_err(|err| format!("failed to download {asset_name}: {err}"))?;
+            ) {
+                return Self::installed(binary, &file_name)
+                    .ok_or_else(|| format!("failed to download {asset_name}: {err}"));
+            }
 
             for entry in fs::read_dir(".").map_err(|err| err.to_string())?.flatten() {
                 let name = entry.file_name();
@@ -172,6 +193,21 @@ impl WakacraftExtension {
 
         zed::make_file_executable(&binary_path.to_string_lossy())?;
         Ok(binary_path)
+    }
+
+    /// A previously downloaded `<binary>-<version>/<file_name>` in the work directory, if any.
+    fn installed(binary: &str, file_name: &str) -> Option<PathBuf> {
+        fs::read_dir(".")
+            .ok()?
+            .flatten()
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(&format!("{binary}-"))
+            })
+            .map(|entry| entry.path().join(file_name))
+            .find(|path| fs::metadata(path).is_ok_and(|stat| stat.is_file()))
     }
 
     fn cached_or_download(
@@ -221,25 +257,40 @@ impl zed::Extension for WakacraftExtension {
             Some(path) => path,
             None => {
                 let path = Self::cached_or_download(&mut self.cached_cli_binary_path, || {
-                    Self::download(server_id, "wakatime-cli", "wakatime/wakatime-cli")
+                    Self::download(server_id, "wakatime-cli", "wakatime/wakatime-cli", None)
                 })?;
                 Self::absolute(&path)
             }
         };
         let ls = Self::cached_or_download(&mut self.cached_ls_binary_path, || {
-            Self::download(server_id, "wakatime-ls", "wakatime/zed-wakatime")
+            Self::download(
+                server_id,
+                "wakatime-ls",
+                "wakatime/zed-wakatime",
+                Some(WAKATIME_LS_TAG),
+            )
         })?;
 
-        // The released wakatime-ls (v0.1.10) accepts only `--wakatime-cli`; passing the `--project-folder` that
-        // zed-wakatime's main branch sends makes it exit. wakatime-cli detects the project from the repository.
+        // wakatime-ls v0.1.10 accepts only `--wakatime-cli`; passing the `--project-folder` that zed-wakatime's main
+        // branch sends makes it exit. wakatime-cli detects the project from the repository.
         let args = vec!["--wakatime-cli".to_string(), cli];
 
         let mut env = worktree.shell_env();
         let home = wakacraft_home(&env).ok_or(
             "wakacraft: could not find your home directory (HOME / USERPROFILE) in the shell environment",
         )?;
-        env.retain(|(name, _)| !name.eq_ignore_ascii_case("WAKATIME_HOME"));
+        // A WAKATIME_API_KEY from the user's shell is their WakaTime key; it must never reach wakacraft.
+        env.retain(|(name, _)| {
+            !name.eq_ignore_ascii_case("WAKATIME_HOME")
+                && !name.eq_ignore_ascii_case("WAKATIME_API_KEY")
+        });
         env.push(("WAKATIME_HOME".to_string(), home));
+        // The key goes to wakatime-cli through the environment. As an `api-key` initialization option, wakatime-ls
+        // would put it on the cli's command line and write that command line to Zed's log. wakatime-cli prefers an
+        // `api_key` in ~/.wakacraft/.wakatime.cfg when there is one.
+        if let Some(key) = setting(worktree, "api-key").filter(|key| is_api_key(key)) {
+            env.push(("WAKATIME_API_KEY".to_string(), key));
+        }
 
         Ok(Command {
             command: Self::absolute(&ls),
@@ -248,32 +299,45 @@ impl zed::Extension for WakacraftExtension {
         })
     }
 
-    /// The user's `lsp.wakacraft.initialization_options` (`api-key`, `api-url`), with the API URL defaulting to
-    /// wakacraft.tech. It is always set, so heartbeats can never fall through to wakatime-cli's default server.
+    /// Only `api-url` is handed to wakatime-ls. It is always set (default wakacraft.tech), so heartbeats never fall
+    /// through to wakatime-cli's default server.
     fn language_server_initialization_options(
         &mut self,
         _server_id: &LanguageServerId,
         worktree: &Worktree,
     ) -> Result<Option<serde_json::Value>> {
-        let mut options = LspSettings::for_worktree(SERVER_ID, worktree)
-            .ok()
-            .and_then(|settings| settings.initialization_options)
-            .filter(serde_json::Value::is_object)
-            .unwrap_or_else(|| serde_json::json!({}));
-
-        let object = options
-            .as_object_mut()
-            .expect("initialization options are an object");
-        let has_url = object
-            .get("api-url")
-            .and_then(serde_json::Value::as_str)
-            .is_some_and(|url| !url.trim().is_empty());
-        if !has_url {
-            object.insert("api-url".to_string(), DEFAULT_API_URL.into());
-        }
-
-        Ok(Some(options))
+        let api_url = setting(worktree, "api-url").unwrap_or_else(|| DEFAULT_API_URL.to_string());
+        Ok(Some(serde_json::json!({ "api-url": api_url })))
     }
+}
+
+/// `lsp.wakacraft.settings.<key>` from Zed's settings. `initialization_options.<key>` is read as well, but Zed also
+/// hands initialization options to wakatime-ls unchanged, so the key belongs under `settings`.
+fn setting(worktree: &Worktree, key: &str) -> Option<String> {
+    let settings = LspSettings::for_worktree(SERVER_ID, worktree).ok()?;
+    [settings.settings, settings.initialization_options]
+        .into_iter()
+        .flatten()
+        .find_map(|value| {
+            value
+                .get(key)
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_string)
+        })
+}
+
+/// `waka_<uuid>`, the format wakacraft issues and wakatime-cli accepts.
+fn is_api_key(value: &str) -> bool {
+    let Some(uuid) = value.strip_prefix("waka_") else {
+        return false;
+    };
+    let groups: Vec<&str> = uuid.split('-').collect();
+    groups.iter().map(|group| group.len()).eq([8, 4, 4, 4, 12])
+        && groups
+            .iter()
+            .all(|group| group.chars().all(|c| c.is_ascii_hexdigit()))
 }
 
 zed::register_extension!(WakacraftExtension);
