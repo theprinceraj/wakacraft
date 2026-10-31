@@ -33,19 +33,29 @@ api_key = waka_…
 Restart your editor. Heartbeats show up on the dashboard within a couple of minutes. To explore the UI before any
 real activity exists: `bun run seed:demo you@example.com`.
 
+## Editor extensions
+
+Any WakaTime plugin works as described above, but every one of them shares `~/.wakatime.cfg`: when one plugin
+rewrites that file, your heartbeats quietly go back to WakaTime. wakacraft's own extensions avoid this. They run
+wakatime-cli with its own home, `~/.wakacraft` (config, offline queue, log), so they can run next to the official
+WakaTime plugins without interfering:
+
+- [VS Code](extensions/vscode) (and Cursor, Windsurf, VSCodium)
+- [Zed](extensions/zed)
+
 ## What works today
 
-| Area | Status |
-| --- | --- |
-| Heartbeat ingestion — `POST heartbeats`, `heartbeats.bulk` (wakatime-cli wire format, offline-queue dedup), `GET`/`DELETE` heartbeats | ✅ |
-| Auth — session, `Basic base64(api_key)`, `Bearer`, `?api_key=`; multiple hashed API keys per user | ✅ |
-| `summaries` (start/end or named ranges, project/branch filters, writes_only/timezone overrides; keystroke timeout fixed at 15 min) | ✅ |
-| `durations` with every `slice_by` · `stats` and `stats/:range` · `status_bar/today` (+ `statusbar/today` used by `wakatime-cli --today`) · `all_time_since_today` | ✅ |
-| `projects`, `user_agents`, `machine_names`, `users/current` | ✅ |
-| Editor/OS detection from plugin user agents (VS Code, Cursor, JetBrains IDEs, Neovim, …) | ✅ |
-| AI coding fields (AI vs human line changes, tokens, sessions) | ✅ |
-| Dashboard: stat tiles, 12-month heatmap, daily stacked chart, timeline, language/editor donuts, weekdays, projects, categories, machines | ✅ |
-| CORS for browser-extension plugins | ✅ |
+| Area                                                                                                                                                              | Status |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| Heartbeat ingestion — `POST heartbeats`, `heartbeats.bulk` (wakatime-cli wire format, offline-queue dedup), `GET`/`DELETE` heartbeats                             | ✅     |
+| Auth — session, `Basic base64(api_key)`, `Bearer`, `?api_key=`; multiple hashed API keys per user                                                                 | ✅     |
+| `summaries` (start/end or named ranges, project/branch filters, writes_only/timezone overrides; keystroke timeout fixed at 15 min)                                | ✅     |
+| `durations` with every `slice_by` · `stats` and `stats/:range` · `status_bar/today` (+ `statusbar/today` used by `wakatime-cli --today`) · `all_time_since_today` | ✅     |
+| `projects`, `user_agents`, `machine_names`, `users/current`                                                                                                       | ✅     |
+| Editor/OS detection from plugin user agents (VS Code, Cursor, JetBrains IDEs, Neovim, …)                                                                          | ✅     |
+| AI coding fields (AI vs human line changes, tokens, sessions)                                                                                                     | ✅     |
+| Dashboard: stat tiles, 12-month heatmap, daily stacked chart, timeline, language/editor donuts, weekdays, projects, categories, machines                          | ✅     |
+| CORS for browser-extension plugins                                                                                                                                | ✅     |
 
 The full feature-parity plan is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
