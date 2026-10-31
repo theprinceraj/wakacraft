@@ -1,8 +1,9 @@
-export const HeartbeatTypes = { File: 'file', Domain: 'domain', Url: 'url', App: 'app' } as const;
+/** wakatime-cli `pkg/heartbeat/entity.go`. `event` is sent for non-file activity such as AI agent sessions. */
+export const HeartbeatTypes = { File: 'file', Domain: 'domain', Url: 'url', Event: 'event', App: 'app' } as const;
 export type HeartbeatType = (typeof HeartbeatTypes)[keyof typeof HeartbeatTypes];
 export const HeartbeatTypesList: HeartbeatType[] = Object.values(HeartbeatTypes);
 
-/** The categories wakatime-cli accepts for `--category`. */
+/** The categories wakatime-cli accepts for `--category` (`pkg/heartbeat/category.go`). */
 export const Categories = {
 	Coding: 'coding',
 	AiCoding: 'ai coding',
@@ -21,6 +22,7 @@ export const Categories = {
 	Designing: 'designing',
 	Translating: 'translating',
 	Meeting: 'meeting',
+	Notes: 'notes',
 	Planning: 'planning',
 	Supporting: 'supporting',
 	Advising: 'advising',

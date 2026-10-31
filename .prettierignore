@@ -4,3 +4,7 @@ node_modules
 bun.lock
 src/lib/.srchash
 next-env.d.ts
+extensions/*/out
+extensions/*/node_modules
+extensions/*/target
+extensions/vscode/bun.lock

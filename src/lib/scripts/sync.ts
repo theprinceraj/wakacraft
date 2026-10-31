@@ -11,44 +11,47 @@ import { Glob } from 'bun';
 const STORE_FILE = join(import.meta.dirname, '../.srchash');
 const SRC_DIR = join(import.meta.dirname, '../');
 
+/**
+ * Everything the generated zod depends on: the schemas, the `util/` modules they import enums and helpers from
+ * (`util/Heartbeats.ts` holds the heartbeat category list, for one), and the generator itself. Hashing only the
+ * schema files missed enum edits, so `sync` reported "no changes" and left the zod DTOs stale.
+ */
+const INPUT_GLOBS = ['./mongo/schemas/*.ts', './util/*.ts', './scripts/schemaToZod.ts'];
+
+/** Input files in a stable order; `Glob.scan` order is filesystem-dependent. */
+async function inputFiles(): Promise<string[]> {
+	const files = new Set<string>();
+	for (const pattern of INPUT_GLOBS) {
+		for await (const file of new Glob(pattern).scan(SRC_DIR)) files.add(file.replaceAll('\\', '/'));
+	}
+	return [...files].sort();
+}
+
 async function calculateHash(): Promise<string> {
 	const startTime = performance.now();
-	const glob = new Glob('./mongo/schemas/*.schema.ts');
-	const files: string[] = [];
-
-	for await (const file of glob.scan(SRC_DIR)) files.push(join(SRC_DIR, file));
+	const files = await inputFiles();
 	console.log(`Found ${files.length} files for hashing.`);
-	const contents = await Promise.all(files.map((fa) => readFile(fa)));
-	const content = contents.join('');
-	const hash = createHash('sha256').update(content).digest('hex');
+
+	const hash = createHash('sha256');
+	for (const file of files) {
+		// Path included so renaming or moving content between files also counts as a change.
+		hash
+			.update(file)
+			.update('\0')
+			.update(await readFile(join(SRC_DIR, file)))
+			.update('\0');
+	}
 
 	const endTime = performance.now();
 	console.log(`Hash calculation took ${(endTime - startTime).toFixed(2)}ms`);
-	return hash;
+	return hash.digest('hex');
 }
 
 async function calculateSize(): Promise<string> {
 	const startTime = performance.now();
-	const glob = new Glob('./mongo/schemas/*.schema.ts');
-
-	let totalSize = 0;
-	const promises: Promise<number>[] = [];
-
-	for await (const file of glob.scan(SRC_DIR)) {
-		promises.push(stat(join(SRC_DIR, file)).then((stats) => stats.size));
-
-		if (promises.length >= 50) {
-			const sizes = await Promise.all(promises);
-			totalSize += sizes.reduce((sum, size) => sum + size, 0);
-			promises.length = 0;
-		}
-	}
-	console.log(`Found ${totalSize} bytes in schema files.`);
-
-	if (promises.length > 0) {
-		const sizes = await Promise.all(promises);
-		totalSize += sizes.reduce((sum, size) => sum + size, 0);
-	}
+	const sizes = await Promise.all((await inputFiles()).map((file) => stat(join(SRC_DIR, file)).then((s) => s.size)));
+	const totalSize = sizes.reduce((sum, size) => sum + size, 0);
+	console.log(`Found ${totalSize} bytes in schema input files.`);
 
 	const endTime = performance.now();
 	console.log(`Size calculation took ${(endTime - startTime).toFixed(2)}ms`);

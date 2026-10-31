@@ -1,0 +1,81 @@
+{
+	"name": "wakacraft",
+	"displayName": "wakacraft",
+	"description": "Automatic time tracking for wakacraft: coding time, projects and languages on your wakacraft dashboard.",
+	"version": "0.1.0",
+	"publisher": "wakacraft",
+	"license": "AGPL-3.0-only",
+	"icon": "images/icon.png",
+	"homepage": "https://wakacraft.tech",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/theprinceraj/wakacraft",
+		"directory": "extensions/vscode"
+	},
+	"engines": {
+		"vscode": "^1.90.0"
+	},
+	"categories": [
+		"Other",
+		"Visualization"
+	],
+	"keywords": [
+		"time tracking",
+		"wakatime",
+		"productivity",
+		"analytics"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./out/extension.js",
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": true
+		},
+		"virtualWorkspaces": false
+	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "wakacraft.apiKey",
+				"title": "wakacraft: API Key"
+			},
+			{
+				"command": "wakacraft.serverUrl",
+				"title": "wakacraft: Server URL"
+			},
+			{
+				"command": "wakacraft.dashboard",
+				"title": "wakacraft: Open Dashboard"
+			},
+			{
+				"command": "wakacraft.showLog",
+				"title": "wakacraft: Show Log"
+			}
+		],
+		"configuration": {
+			"title": "wakacraft",
+			"properties": {
+				"wakacraft.statusBar.enabled": {
+					"type": "boolean",
+					"default": true,
+					"description": "Show today's coding time in the status bar."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"build": "tsc -p .",
+		"watch": "tsc -w -p .",
+		"typecheck": "tsc --noEmit -p .",
+		"package": "tsc -p . && vsce package --no-dependencies",
+		"vscode:prepublish": "tsc -p ."
+	},
+	"devDependencies": {
+		"@types/node": "^20",
+		"@types/vscode": "1.90.0",
+		"@vscode/vsce": "^4.1.0",
+		"typescript": "^5"
+	}
+}

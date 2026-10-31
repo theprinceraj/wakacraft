@@ -10,7 +10,7 @@ export const ExternalDurationZodSchema = z.object({
 	externalId: z.string().max(256),
 	provider: z.string().max(128).nullish(),
 	entity: z.string().max(2048),
-	type: z.enum(['file', 'domain', 'url', 'app']),
+	type: z.enum(['file', 'domain', 'url', 'event', 'app']),
 	category: z
 		.enum([
 			'coding',
@@ -30,6 +30,7 @@ export const ExternalDurationZodSchema = z.object({
 			'designing',
 			'translating',
 			'meeting',
+			'notes',
 			'planning',
 			'supporting',
 			'advising',

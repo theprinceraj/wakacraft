@@ -26,7 +26,15 @@ const eslintConfig = defineConfig([
 		files: ['src/lib/mongo/**/*.ts', 'src/lib/scripts/**/*.ts'],
 		rules: { '@typescript-eslint/no-explicit-any': 'off' },
 	},
-	globalIgnores(['.next/**', 'out/**', 'build/**', '.data/**', 'next-env.d.ts', 'src/lib/mongo/zod/**']),
+	globalIgnores([
+		'.next/**',
+		'out/**',
+		'build/**',
+		'.data/**',
+		'next-env.d.ts',
+		'src/lib/mongo/zod/**',
+		'extensions/**',
+	]),
 ]);
 
 export default eslintConfig;

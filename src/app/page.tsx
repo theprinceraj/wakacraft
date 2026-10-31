@@ -46,8 +46,8 @@ const FEATURES = [
 const STEPS = [
 	['Sign in', 'Sign in with GitHub and create an API key under Settings. It takes a few seconds.'],
 	[
-		'Point your plugin at wakacraft',
-		'Add one line to ~/.wakatime.cfg. The WakaTime plugin you already use keeps working, unchanged.',
+		'Connect your editor',
+		'Install the wakacraft extension for VS Code or Zed. Elsewhere, point the WakaTime plugin you already use at wakacraft with one line in ~/.wakatime.cfg.',
 	],
 	['Write code', 'Heartbeats arrive within a couple of minutes and your dashboard fills in by itself.'],
 ];
@@ -248,7 +248,8 @@ export default function HomePage() {
 						<div className="mt-6 space-y-4 leading-relaxed text-muted-foreground">
 							<p>
 								wakacraft implements the same HTTP API as WakaTime, so every WakaTime editor plugin works with it
-								unchanged. Point the plugin at wakacraft, bring your history along, and keep coding.
+								unchanged. Point the plugin at wakacraft, bring your history along, and keep coding. On VS Code and Zed,
+								wakacraft&apos;s own extensions do the setup for you.
 							</p>
 							<p>
 								It’s AGPL-licensed and built in the open. Use the hosted instance at wakacraft.tech, or run your own on

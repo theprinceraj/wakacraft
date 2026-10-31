@@ -1,0 +1,9 @@
+src/**
+**/*.map
+tsconfig.json
+node_modules/**
+*.vsix
+.gitignore
+bun.lock
+# Hidden folders (editor and tool state) never belong in the package.
+.*/**

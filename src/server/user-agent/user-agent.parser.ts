@@ -4,7 +4,8 @@
  * Shape sent by wakatime-cli:
  *   wakatime/v1.102.1 (windows-10.0.26100-x86_64) go1.24.1 vscode/1.98.0 vscode-wakatime/25.0.0
  *   └ cli version     └ os-release-arch          └ go     └ editor/ver   └ plugin/ver
- * VS Code forks report their own app name in the editor slot (`Cursor/0.42.0 vscode-wakatime/…`).
+ * VS Code forks report their own app name in the editor slot (`Cursor/0.42.0 vscode-wakatime/…`). wakacraft's own
+ * plugins (`extensions/`) name themselves `<editor>-wakacraft` and are parsed the same way.
  */
 
 export interface ParsedUserAgent {
@@ -99,6 +100,9 @@ const PLUGIN_EDITORS: Record<string, string> = {
 	zed: 'Zed',
 };
 
+/** `vscode-wakatime`, `Zed-wakatime`, and wakacraft's own `vscode-wakacraft`. */
+const PLUGIN_SUFFIX = /-(?:wakatime|wakacraft)$/i;
+
 const BROWSER_PLUGINS = new Set(['chrome', 'firefox', 'edge', 'safari', 'browser']);
 const DESKTOP_PLUGINS = new Set(['desktop', 'macos', 'windows', 'linux']);
 
@@ -147,8 +151,8 @@ export function parseUserAgent(value: string | null | undefined): ParsedUserAgen
 		.filter((match): match is RegExpExecArray => match !== null)
 		.map((match) => ({ name: match[1], version: match[2] }));
 
-	const pluginIndex = tokens.findIndex((token) => /-wakatime$/i.test(token.name));
-	const pluginName = pluginIndex === -1 ? null : tokens[pluginIndex].name.toLowerCase().replace(/-wakatime$/, '');
+	const pluginIndex = tokens.findIndex((token) => PLUGIN_SUFFIX.test(token.name));
+	const pluginName = pluginIndex === -1 ? null : tokens[pluginIndex].name.toLowerCase().replace(PLUGIN_SUFFIX, '');
 
 	if (pluginName) {
 		result.isBrowserExtension = BROWSER_PLUGINS.has(pluginName);
@@ -156,7 +160,7 @@ export function parseUserAgent(value: string | null | undefined): ParsedUserAgen
 	}
 
 	const editorToken = (pluginIndex > 0 ? tokens.slice(0, pluginIndex) : tokens)
-		.filter((token) => !/^wakatime$/i.test(token.name) && !/-wakatime$/i.test(token.name))
+		.filter((token) => !/^wakatime$/i.test(token.name) && !PLUGIN_SUFFIX.test(token.name))
 		.at(-1);
 
 	if (editorToken) {
