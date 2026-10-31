@@ -8,7 +8,7 @@ export const HeartbeatZodSchema = z.object({
 	id: z.string(),
 	userId: z.string(),
 	entity: z.string(),
-	type: z.enum(['file', 'domain', 'url', 'app']),
+	type: z.enum(['file', 'domain', 'url', 'event', 'app']),
 	category: z
 		.enum([
 			'coding',
@@ -28,6 +28,7 @@ export const HeartbeatZodSchema = z.object({
 			'designing',
 			'translating',
 			'meeting',
+			'notes',
 			'planning',
 			'supporting',
 			'advising',
