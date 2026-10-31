@@ -28,6 +28,14 @@ describe('parseUserAgent', () => {
 			'wakatime/v1.95.0 (darwin-23.0.0-arm64) go1.23.0 sublime_text/4180 sublime-wakatime/10.0.1',
 			{ editor: 'Sublime Text', version: '4180', os: 'Mac' },
 		],
+		[
+			'wakatime/v2.28.0 (windows-10.0.26300-x86_64) go1.27.3 vscode/1.105.0 vscode-wakacraft/0.1.0',
+			{ editor: 'VS Code', version: '1.105.0', os: 'Windows' },
+		],
+		[
+			'wakatime/v2.28.0 (darwin-25.0.0-arm64) go1.27.3 Zed/1.26.2 zed-wakacraft/0.1.0',
+			{ editor: 'Zed', version: '1.26.2', os: 'Mac' },
+		],
 	])('%s', (value, expected) => {
 		expect(parseUserAgent(value)).toMatchObject(expected);
 	});
