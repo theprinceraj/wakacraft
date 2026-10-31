@@ -1,5 +1,7 @@
 /** Same cadence as WakaTime plugins: a new file, a save, or two minutes on the same file triggers a heartbeat. */
 export const HEARTBEAT_INTERVAL_MS = 2 * 60 * 1000;
+/** Heartbeats waiting while a cli run is in flight; beyond this the oldest are dropped. */
+export const MAX_PENDING = 100;
 
 export interface Heartbeat {
 	entity: string;
@@ -38,17 +40,31 @@ export function heartbeatArgs(heartbeat: Heartbeat, connection: Connection): str
 	return args;
 }
 
+/** One heartbeat in wakatime-cli's `--extra-heartbeats` stdin format (`pkg/params` `ExtraHeartbeat`). */
+export function extraHeartbeat(heartbeat: Heartbeat): Record<string, unknown> {
+	return {
+		entity: heartbeat.entity,
+		entity_type: 'file',
+		time: heartbeat.time,
+		is_write: heartbeat.isWrite,
+		...(heartbeat.lineno ? { lineno: heartbeat.lineno } : {}),
+		...(heartbeat.cursorpos ? { cursorpos: heartbeat.cursorpos } : {}),
+		...(heartbeat.lines !== undefined ? { lines: heartbeat.lines } : {}),
+		...(heartbeat.category && heartbeat.category !== 'coding' ? { category: heartbeat.category } : {}),
+	};
+}
+
 /**
- * Decides which editor events become heartbeats and keeps at most one wakatime-cli process running: events that
- * arrive while one is in flight collapse into a single pending heartbeat (the latest, remembering any save).
+ * Decides which editor events become heartbeats and keeps at most one wakatime-cli process running. Heartbeats that
+ * come due while a run is in flight wait, in order, and go out together in the next run, so a save is never dropped.
  */
 export class HeartbeatQueue {
 	private lastEntity = '';
 	private lastSentAt = 0;
 	private inFlight = false;
-	private pending: Heartbeat | null = null;
+	private pending: Heartbeat[] = [];
 
-	constructor(private readonly send: (heartbeat: Heartbeat) => Promise<void>) {}
+	constructor(private readonly send: (heartbeats: Heartbeat[]) => Promise<void>) {}
 
 	push(heartbeat: Heartbeat, now = Date.now()): void {
 		const due =
@@ -57,26 +73,22 @@ export class HeartbeatQueue {
 
 		this.lastEntity = heartbeat.entity;
 		this.lastSentAt = now;
-
-		if (this.inFlight) {
-			const isWrite = heartbeat.isWrite || (this.pending?.entity === heartbeat.entity && this.pending.isWrite);
-			this.pending = { ...heartbeat, isWrite };
-			return;
-		}
-		void this.run(heartbeat);
+		this.pending.push(heartbeat);
+		if (this.pending.length > MAX_PENDING) this.pending.splice(0, this.pending.length - MAX_PENDING);
+		if (!this.inFlight) void this.run();
 	}
 
-	private async run(heartbeat: Heartbeat): Promise<void> {
+	private async run(): Promise<void> {
 		this.inFlight = true;
-		try {
-			await this.send(heartbeat);
-		} catch {
-			// send() reports its own failures; a broken heartbeat must not wedge the queue.
-		} finally {
-			this.inFlight = false;
-			const next = this.pending;
-			this.pending = null;
-			if (next) void this.run(next);
+		while (this.pending.length) {
+			const batch = this.pending;
+			this.pending = [];
+			try {
+				await this.send(batch);
+			} catch {
+				// send() reports its own failures; a broken run must not wedge the queue.
+			}
 		}
+		this.inFlight = false;
 	}
 }

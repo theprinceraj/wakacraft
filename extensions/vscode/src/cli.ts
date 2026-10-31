@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { chmod, mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -52,6 +53,8 @@ export const ExitCode = {
 	ApiError: 102,
 	ConfigError: 103,
 	InvalidApiKey: 104,
+	/** Sending was postponed after recent API errors; heartbeats were saved to the offline queue. */
+	Backoff: 112,
 } as const;
 
 /**
@@ -63,7 +66,7 @@ export function runCli(args: string[], input?: string, timeoutMs = 60_000): Prom
 		const child = execFile(
 			cliPath(),
 			args,
-			{ env: { ...process.env, WAKATIME_HOME: wakacraftHome() }, timeout: timeoutMs, windowsHide: true },
+			{ env: cliEnv(), timeout: timeoutMs, windowsHide: true },
 			(error, stdout, stderr) => {
 				const code = error ? (typeof error.code === 'number' ? error.code : -1) : 0;
 				const failure =
@@ -73,6 +76,16 @@ export function runCli(args: string[], input?: string, timeoutMs = 60_000): Prom
 		);
 		if (input !== undefined) child.stdin?.end(input);
 	});
+}
+
+/**
+ * The editor's environment with wakacraft's home. An inherited `WAKATIME_API_KEY` is the user's WakaTime key, which
+ * wakatime-cli would otherwise use whenever the wakacraft config has no key.
+ */
+function cliEnv(): NodeJS.ProcessEnv {
+	const env: NodeJS.ProcessEnv = { ...process.env, WAKATIME_HOME: wakacraftHome() };
+	for (const name of Object.keys(env)) if (name.toUpperCase() === 'WAKATIME_API_KEY') delete env[name];
+	return env;
 }
 
 export async function readConfig(key: string): Promise<string> {
@@ -108,18 +121,38 @@ async function latestVersion(): Promise<string> {
 	return tag_name;
 }
 
+async function fetchOk(url: string, timeoutMs: number): Promise<Response> {
+	const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+	if (!response.ok) throw new Error(`Downloading ${url} failed: ${response.status}`);
+	return response;
+}
+
+/** The SHA-256 the release's `checksums_sha256.txt` lists for `file` (lines are `<hex>  <file name>`). */
+export function checksumFor(checksums: string, file: string): string | undefined {
+	for (const line of checksums.split(/\r?\n/)) {
+		const [hash, name] = line.trim().split(/\s+/);
+		if (name?.replace(/^\*/, '') === file) return hash.toLowerCase();
+	}
+	return undefined;
+}
+
 async function download(version: string): Promise<void> {
 	const asset = cliAssetName();
-	const url = `https://github.com/wakatime/wakatime-cli/releases/download/${version}/${asset}.zip`;
-	const response = await fetch(url, { signal: AbortSignal.timeout(120_000) });
-	if (!response.ok) throw new Error(`Downloading ${url} failed: ${response.status}`);
+	const base = `https://github.com/wakatime/wakatime-cli/releases/download/${version}`;
+	const [zip, checksums] = await Promise.all([
+		fetchOk(`${base}/${asset}.zip`, 120_000).then(async (response) => Buffer.from(await response.arrayBuffer())),
+		fetchOk(`${base}/checksums_sha256.txt`, 30_000).then((response) => response.text()),
+	]);
 
-	const binary = extractZipEntry(
-		Buffer.from(await response.arrayBuffer()),
-		asset + (process.platform === 'win32' ? '.exe' : ''),
-	);
+	const expected = checksumFor(checksums, `${asset}.zip`);
+	const actual = createHash('sha256').update(zip).digest('hex');
+	if (!expected) throw new Error(`${asset}.zip is not listed in the ${version} checksums`);
+	if (actual !== expected) throw new Error(`${asset}.zip failed its checksum check (${actual} ≠ ${expected})`);
+
+	const binary = extractZipEntry(zip, asset + (process.platform === 'win32' ? '.exe' : ''));
 	await mkdir(wakacraftHome(), { recursive: true });
-	const temp = `${cliPath()}.download`;
+	// Unique per process: several editor windows may update at the same time.
+	const temp = `${cliPath()}.${process.pid}-${Date.now()}.download`;
 	await writeFile(temp, binary);
 	await chmod(temp, 0o755);
 	try {

@@ -3,6 +3,7 @@ src/**
 tsconfig.json
 node_modules/**
 *.vsix
-.omc/**
 .gitignore
 bun.lock
+# Hidden folders (editor and tool state) never belong in the package.
+.*/**

@@ -3,13 +3,19 @@ import { unwatchFile, watchFile } from 'node:fs';
 import * as vscode from 'vscode';
 
 import { configFile, DEFAULT_API_URL, ensureCli, ExitCode, logFile, readConfig, runCli, writeConfig } from './cli';
-import { heartbeatArgs, HeartbeatQueue, type Heartbeat } from './heartbeat';
+import { extraHeartbeat, heartbeatArgs, HeartbeatQueue, type Heartbeat } from './heartbeat';
 
 const API_KEY_PATTERN = /^waka_[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 const TODAY_REFRESH_MS = 2 * 60 * 1000;
 const HEARTBEAT_TIMEOUT_MS = 5 * 60 * 1000;
+/**
+ * The first run in a new home reads every local AI agent transcript before sending; with a lot of history that has
+ * taken longer than five minutes. Killing it would only make the next run start the scan over.
+ */
+const FIRST_HEARTBEAT_TIMEOUT_MS = 30 * 60 * 1000;
 const UPDATE_CHECK_KEY = 'wakacraft.cliCheckedAt';
 const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const INSTALL_RETRY_MS = 10 * 60 * 1000;
 
 /** `https://host/api/v1` → `https://host`. */
 const siteUrl = (apiUrl: string) => apiUrl.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
@@ -34,8 +40,12 @@ class Wakacraft implements vscode.Disposable {
 	private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 3);
 	private readonly disposables: vscode.Disposable[] = [];
 	private readonly plugin: string;
-	private readonly queue = new HeartbeatQueue((heartbeat) => this.send(heartbeat));
+	private readonly queue = new HeartbeatQueue((heartbeats) => this.send(heartbeats));
 	private ready = false;
+	private sentOnce = false;
+	private disposed = false;
+	private installing: Promise<boolean> | undefined;
+	private installRetry: NodeJS.Timeout | undefined;
 	private apiUrl = DEFAULT_API_URL;
 	private apiKey = '';
 	private buildTasks = 0;
@@ -52,33 +62,12 @@ class Wakacraft implements vscode.Disposable {
 	}
 
 	async start(): Promise<void> {
-		this.setStatus('$(sync~spin) wakacraft', 'Installing wakatime-cli…');
 		this.statusBar.show();
 		this.registerCommands();
+		if (!(await this.install())) return;
 
-		try {
-			const lastCheck = this.context.globalState.get<number>(UPDATE_CHECK_KEY, 0);
-			const checkForUpdate = Date.now() - lastCheck > UPDATE_CHECK_INTERVAL_MS;
-			const version = await ensureCli(checkForUpdate);
-			if (checkForUpdate) await this.context.globalState.update(UPDATE_CHECK_KEY, Date.now());
-			this.log(`wakatime-cli ${version}, config ${configFile()}`);
-		} catch (error) {
-			this.log(`Installing wakatime-cli failed: ${String(error)}`);
-			this.setStatus('$(warning) wakacraft', `Could not install wakatime-cli: ${String(error)}`, 'wakacraft.showLog');
-			return;
-		}
-
-		this.ready = true;
 		await this.loadConfig();
-		// Hand edits to the config file (or the Zed extension, which shares it) take effect without a reload.
-		watchFile(configFile(), { interval: 10_000 }, () => void this.loadConfig());
-		this.disposables.push({ dispose: () => unwatchFile(configFile()) });
-
-		this.listen();
-		this.todayTimer = setInterval(() => void this.refreshToday(true), TODAY_REFRESH_MS);
-		this.onEditor(vscode.window.activeTextEditor, false);
-
-		if (!this.apiKey) {
+		if (!this.apiKey && !this.disposed) {
 			const choice = await vscode.window.showInformationMessage(
 				'Connect wakacraft: paste an API key from your wakacraft settings to start tracking.',
 				'Enter API key',
@@ -89,11 +78,54 @@ class Wakacraft implements vscode.Disposable {
 		}
 	}
 
+	/**
+	 * Installs (or updates) wakatime-cli, then starts tracking. A failed install is retried every few minutes, and
+	 * right away when a command needs the cli, instead of leaving the extension inert until the window reloads.
+	 */
+	private install(): Promise<boolean> {
+		if (this.ready) return Promise.resolve(true);
+		this.installing ??= this.runInstall().finally(() => (this.installing = undefined));
+		return this.installing;
+	}
+
+	private async runInstall(): Promise<boolean> {
+		clearTimeout(this.installRetry);
+		this.setStatus('$(sync~spin) wakacraft', 'Installing wakatime-cli…');
+		try {
+			const lastCheck = this.context.globalState.get<number>(UPDATE_CHECK_KEY, 0);
+			const checkForUpdate = Date.now() - lastCheck > UPDATE_CHECK_INTERVAL_MS;
+			const version = await ensureCli(checkForUpdate);
+			if (checkForUpdate) await this.context.globalState.update(UPDATE_CHECK_KEY, Date.now());
+			this.log(`wakatime-cli ${version}, config ${configFile()}`);
+		} catch (error) {
+			if (this.disposed) return false;
+			this.log(`Installing wakatime-cli failed, retrying in 10 minutes: ${String(error)}`);
+			this.setStatus('$(warning) wakacraft', `Could not install wakatime-cli: ${String(error)}`, 'wakacraft.showLog');
+			this.installRetry = setTimeout(async () => {
+				if (await this.install()) await this.loadConfig();
+			}, INSTALL_RETRY_MS);
+			return false;
+		}
+		// The window may have closed while the download ran; don't start timers and watchers for a dead extension.
+		if (this.disposed) return false;
+
+		this.ready = true;
+		// Hand edits to the config file (or the Zed extension, which shares it) take effect without a reload.
+		watchFile(configFile(), { interval: 10_000 }, () => void this.loadConfig());
+		this.disposables.push({ dispose: () => unwatchFile(configFile()) });
+		this.listen();
+		this.todayTimer = setInterval(() => void this.refreshToday(true), TODAY_REFRESH_MS);
+		return true;
+	}
+
 	private async loadConfig(): Promise<void> {
+		if (this.disposed) return;
 		this.apiKey = await readConfig('api_key');
 		this.apiUrl = (await readConfig('api_url')) || DEFAULT_API_URL;
-		if (this.apiKey) await this.refreshToday(true);
-		else this.setStatus('$(key) wakacraft', 'Set your wakacraft API key to start tracking', 'wakacraft.apiKey');
+		if (this.apiKey) {
+			await this.refreshToday(true);
+			this.onEditor(vscode.window.activeTextEditor, false);
+		} else this.setStatus('$(key) wakacraft', 'Set your wakacraft API key to start tracking', 'wakacraft.apiKey');
 	}
 
 	private registerCommands(): void {
@@ -159,14 +191,22 @@ class Wakacraft implements vscode.Disposable {
 		this.queue.push(heartbeat);
 	}
 
-	private async send(heartbeat: Heartbeat): Promise<void> {
-		const args = heartbeatArgs(heartbeat, { apiUrl: this.apiUrl, plugin: this.plugin });
-		const { code, stderr } = await runCli(args, undefined, HEARTBEAT_TIMEOUT_MS);
+	/** One cli run: the first heartbeat on the command line, the rest through `--extra-heartbeats` on stdin. */
+	private async send(heartbeats: Heartbeat[]): Promise<void> {
+		const [first, ...rest] = heartbeats;
+		const args = heartbeatArgs(first, { apiUrl: this.apiUrl, plugin: this.plugin });
+		// wakatime-cli reads one line of JSON from stdin.
+		const input = rest.length ? JSON.stringify(rest.map(extraHeartbeat)) + '\n' : undefined;
+		if (input) args.push('--extra-heartbeats');
+		const timeout = this.sentOnce ? HEARTBEAT_TIMEOUT_MS : FIRST_HEARTBEAT_TIMEOUT_MS;
+		const { code, stderr } = await runCli(args, input, timeout);
+		if (code !== -1) this.sentOnce = true;
+		if (this.disposed) return;
 
 		if (code === ExitCode.Success) {
 			await this.refreshToday(false);
-		} else if (code === ExitCode.ApiError) {
-			this.log(`Server unreachable; heartbeat saved offline and will be sent later. ${stderr}`);
+		} else if (code === ExitCode.ApiError || code === ExitCode.Backoff) {
+			this.log(`Server unreachable; heartbeats saved offline and will be sent later. ${stderr}`);
 			this.setStatus(
 				'$(cloud-upload) wakacraft',
 				`Offline: heartbeats are queued and will sync. ${stderr}`,
@@ -190,7 +230,7 @@ class Wakacraft implements vscode.Disposable {
 
 	/** Today's total in the status bar. Throttled to once a minute unless `force`. */
 	private async refreshToday(force: boolean): Promise<void> {
-		if (!this.ready || !this.apiKey) return;
+		if (!this.ready || !this.apiKey || this.disposed) return;
 		if (!force && Date.now() - this.lastTodayAt < 60_000) return;
 		this.lastTodayAt = Date.now();
 
@@ -225,7 +265,9 @@ class Wakacraft implements vscode.Disposable {
 	}
 
 	private async promptApiKey(): Promise<void> {
-		if (!this.ready) return void vscode.window.showWarningMessage('wakacraft is still installing wakatime-cli.');
+		if (!(await this.install())) {
+			return void vscode.window.showWarningMessage('wakacraft could not install wakatime-cli yet. See the log.');
+		}
 
 		const key = (
 			await vscode.window.showInputBox({
@@ -239,7 +281,9 @@ class Wakacraft implements vscode.Disposable {
 						? undefined
 						: 'Expected a key like waka_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
 			})
-		)?.trim();
+		)
+			?.trim()
+			.toLowerCase();
 		if (!key) return;
 
 		const check = await this.checkKey(key);
@@ -254,11 +298,10 @@ class Wakacraft implements vscode.Disposable {
 			if (choice !== 'Save') return;
 		}
 
-		await writeConfig('api_key', key.toLowerCase());
+		await writeConfig('api_key', key);
 		// Written explicitly so the shared config never falls back to wakatime-cli's default server.
 		await writeConfig('api_url', this.apiUrl);
 		await this.loadConfig();
-		this.onEditor(vscode.window.activeTextEditor, false);
 		vscode.window.showInformationMessage('wakacraft is tracking your coding time.');
 	}
 
@@ -276,7 +319,9 @@ class Wakacraft implements vscode.Disposable {
 	}
 
 	private async promptServerUrl(): Promise<void> {
-		if (!this.ready) return void vscode.window.showWarningMessage('wakacraft is still installing wakatime-cli.');
+		if (!(await this.install())) {
+			return void vscode.window.showWarningMessage('wakacraft could not install wakatime-cli yet. See the log.');
+		}
 
 		const input = await vscode.window.showInputBox({
 			title: 'wakacraft server',
@@ -308,6 +353,8 @@ class Wakacraft implements vscode.Disposable {
 	}
 
 	dispose(): void {
+		this.disposed = true;
+		clearTimeout(this.installRetry);
 		if (this.todayTimer) clearInterval(this.todayTimer);
 		for (const disposable of this.disposables) disposable.dispose();
 		this.statusBar.dispose();
