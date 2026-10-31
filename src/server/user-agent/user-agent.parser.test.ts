@@ -33,7 +33,8 @@ describe('parseUserAgent', () => {
 			{ editor: 'VS Code', version: '1.105.0', os: 'Windows' },
 		],
 		[
-			'wakatime/v2.28.0 (darwin-25.0.0-arm64) go1.27.3 Zed/1.26.2 zed-wakacraft/0.1.0',
+			// wakacraft's Zed extension runs WakaTime's wakatime-ls, which names itself Zed-wakatime.
+			'wakatime/v2.28.0 (darwin-25.0.0-arm64) go1.27.3 Zed/1.26.2 Zed-wakatime/0.1.10',
 			{ editor: 'Zed', version: '1.26.2', os: 'Mac' },
 		],
 	])('%s', (value, expected) => {

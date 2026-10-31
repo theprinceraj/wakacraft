@@ -100,7 +100,10 @@ const PLUGIN_EDITORS: Record<string, string> = {
 	zed: 'Zed',
 };
 
-/** `vscode-wakatime`, `Zed-wakatime`, and wakacraft's own `vscode-wakacraft`. */
+/**
+ * WakaTime plugins (`vscode-wakatime`), and wakacraft's own extensions: `vscode-wakacraft`, and the Zed extension,
+ * which reports `Zed-wakatime` because it runs WakaTime's wakatime-ls.
+ */
 const PLUGIN_SUFFIX = /-(?:wakatime|wakacraft)$/i;
 
 const BROWSER_PLUGINS = new Set(['chrome', 'firefox', 'edge', 'safari', 'browser']);
