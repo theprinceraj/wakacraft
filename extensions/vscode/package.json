@@ -2,7 +2,7 @@
 	"name": "wakacraft",
 	"displayName": "wakacraft",
 	"description": "Automatic time tracking for wakacraft: coding time, projects and languages on your wakacraft dashboard.",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"publisher": "wakacraft",
 	"license": "AGPL-3.0-only",
 	"icon": "images/icon.png",
