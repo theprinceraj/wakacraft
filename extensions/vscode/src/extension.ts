@@ -109,6 +109,14 @@ class Wakacraft implements vscode.Disposable {
 		// The window may have closed while the download ran; don't start timers and watchers for a dead extension.
 		if (this.disposed) return false;
 
+		// Zed's sandboxed extension can't pass `--log-file`, but its wakatime-cli reads this shared config.
+		try {
+			if ((await readConfig('log_file')) !== logFile()) await writeConfig('log_file', logFile());
+		} catch (error) {
+			this.log(`Could not set the log file in ${configFile()}: ${String(error)}`);
+		}
+		if (this.disposed) return false;
+
 		this.ready = true;
 		// Hand edits to the config file (or the Zed extension, which shares it) take effect without a reload.
 		watchFile(configFile(), { interval: 10_000 }, () => void this.loadConfig());

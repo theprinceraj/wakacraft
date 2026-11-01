@@ -27,7 +27,7 @@ date, so language and project detection, the offline queue and AI-agent tracking
 plugins.
 
 Everything lives in its own directory, `~/.wakacraft` (`%USERPROFILE%\.wakacraft` on Windows): the config
-(`.wakatime.cfg`), the offline queue and the log. It never reads or writes `~/.wakatime.cfg`, so it can run next to
+(`.wakatime.cfg`), the offline queue and the log (`wakacraft.log`). It never reads or writes `~/.wakatime.cfg`, so it can run next to
 the official WakaTime extension, and a WakaTime plugin rewriting that file can't redirect your wakacraft heartbeats.
 The [Zed extension](../zed) uses the same directory, so one API key covers both editors.
 

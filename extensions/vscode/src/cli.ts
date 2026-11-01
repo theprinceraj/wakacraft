@@ -18,7 +18,8 @@ export function wakacraftHome(): string {
 }
 
 export const configFile = () => join(wakacraftHome(), '.wakatime.cfg');
-export const logFile = () => join(wakacraftHome(), 'wakatime.log');
+/** wakatime-cli would name it `wakatime.log`; every run passes `--log-file`, and the shared config's `log_file` points Zed here too. */
+export const logFile = () => join(wakacraftHome(), 'wakacraft.log');
 
 const OS: Partial<Record<NodeJS.Platform, string>> = {
 	win32: 'windows',
@@ -65,7 +66,7 @@ export function runCli(args: string[], input?: string, timeoutMs = 60_000): Prom
 	return new Promise((resolve) => {
 		const child = execFile(
 			cliPath(),
-			args,
+			['--log-file', logFile(), ...args],
 			{ env: cliEnv(), timeout: timeoutMs, windowsHide: true },
 			(error, stdout, stderr) => {
 				const code = error ? (typeof error.code === 'number' ? error.code : -1) : 0;
