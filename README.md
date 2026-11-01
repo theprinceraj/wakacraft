@@ -40,8 +40,8 @@ rewrites that file, your heartbeats quietly go back to WakaTime. wakacraft's own
 wakatime-cli with its own home, `~/.wakacraft` (config, offline queue, log), so they can run next to the official
 WakaTime plugins without interfering:
 
-- [VS Code](extensions/vscode) (and Cursor, Windsurf, VSCodium)
-- [Zed](extensions/zed)
+- [VS Code](https://marketplace.visualstudio.com/items?itemName=wakacraft.wakacraft) (and Cursor, Windsurf, VSCodium): install from the Marketplace ([source](extensions/vscode))
+- [Zed](extensions/zed): not in the Zed registry yet; install it as a dev extension
 
 ## What works today
 

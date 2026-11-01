@@ -5,7 +5,7 @@ branches show up on your wakacraft dashboard. Works in VS Code and its forks (Cu
 
 ## Setup
 
-1. Install the extension.
+1. Install [wakacraft from the Marketplace](https://marketplace.visualstudio.com/items?itemName=wakacraft.wakacraft), or search for "wakacraft" in the Extensions view.
 2. When prompted, paste an API key from **Settings → API keys** on wakacraft (or run **wakacraft: API Key** from the
    command palette).
 

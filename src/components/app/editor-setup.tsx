@@ -5,7 +5,9 @@ import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 
-const EXTENSIONS_URL = 'https://github.com/theprinceraj/wakacraft/tree/main/extensions';
+const VSCODE_EXTENSION_URL = 'https://marketplace.visualstudio.com/items?itemName=wakacraft.wakacraft';
+/** Not in Zed's extension registry yet; installed as a dev extension from the repository. */
+const ZED_EXTENSION_URL = 'https://github.com/theprinceraj/wakacraft/tree/main/extensions/zed';
 
 /**
  * The one-time editor setup. VS Code (and its forks) and Zed get wakacraft's own extensions, which keep their
@@ -38,14 +40,14 @@ export function EditorSetup({ apiUrl, apiKey }: { apiUrl: string; apiKey?: strin
 			<Step n="02" title="Install the wakacraft extension">
 				<ul className="mt-1 space-y-2 text-xs text-muted-foreground">
 					<li>
-						<a className="font-medium text-foreground underline underline-offset-2" href={`${EXTENSIONS_URL}/vscode`}>
+						<a className="font-medium text-foreground underline underline-offset-2" href={VSCODE_EXTENSION_URL}>
 							VS Code
 						</a>{' '}
 						(also Cursor, Windsurf and VSCodium): paste the key when it asks, or run{' '}
 						<code className="tabular">wakacraft: API Key</code> from the command palette.
 					</li>
 					<li>
-						<a className="font-medium text-foreground underline underline-offset-2" href={`${EXTENSIONS_URL}/zed`}>
+						<a className="font-medium text-foreground underline underline-offset-2" href={ZED_EXTENSION_URL}>
 							Zed
 						</a>
 						: add the key to your <code className="tabular">settings.json</code>.

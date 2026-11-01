@@ -7,7 +7,7 @@ Automatic time tracking for [wakacraft](https://wakacraft.tech) in Zed.
 1. Install the extension (until it's in the Zed registry: `zed: install dev extension` and pick this folder; Zed
    needs Rust installed via rustup to build it).
 2. Give it your API key, from **Settings → API keys** on wakacraft. Either:
-   - install the [VS Code extension](../vscode) once and run **wakacraft: API Key** there (both editors share
+   - install the [VS Code extension](https://marketplace.visualstudio.com/items?itemName=wakacraft.wakacraft) once and run **wakacraft: API Key** there (both editors share
      `~/.wakacraft`), or
    - add it to Zed's `settings.json`:
 

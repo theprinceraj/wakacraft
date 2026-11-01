@@ -237,7 +237,7 @@ export default function HomePage() {
 							<span className="text-ember">api_key</span> = waka_…
 						</pre>
 						<p className="mt-8 border-t border-ink-foreground/10 pt-5 text-sm text-ink-foreground/60">
-							That’s the whole setup. VS Code, Cursor, JetBrains, Neovim, Zed, Xcode and 100+ other editors.
+							That’s the whole setup. JetBrains, Neovim, Sublime, Xcode and 100+ other editors.
 						</p>
 					</div>
 					<div>
