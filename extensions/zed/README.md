@@ -43,6 +43,16 @@ starts the server with `WAKATIME_HOME=~/.wakacraft`. The cli's config, offline q
 mix with an official WakaTime setup in `~/.wakatime`. `WAKACRAFT_HOME` in your shell environment overrides the
 directory.
 
+The log is `~/.wakacraft/wakacraft.log` when `~/.wakacraft/.wakatime.cfg` has `log_file` set, which the VS Code
+extension does on startup. Zed can't set it itself: the sandbox can't write that file and `wakatime-ls` takes no
+extra cli flags. Without it, wakatime-cli falls back to its built-in name, `~/.wakacraft/wakatime.log`. To get the
+new name without VS Code, add it yourself, as an absolute path (wakatime-cli doesn't expand `~` here):
+
+```ini
+[settings]
+log_file = /home/you/.wakacraft/wakacraft.log
+```
+
 The extension pins `wakatime-ls` v0.1.10 and falls back to already-downloaded binaries when GitHub is unreachable,
 so tracking still starts offline and heartbeats wait in the offline queue.
 
