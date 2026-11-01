@@ -13,7 +13,7 @@ import { signUpTestUser } from './users';
 
 import type { IWakatimeImportZodSchema } from '@/lib/mongo/zod';
 
-const GOOD_TOKEN = 'waat_0000000000000000000000000000000000000001';
+const GOOD_TOKEN = 'waka_tok_0000000000000000000000000000000000000001';
 const MACHINE_ID = '7fdd436f-ff0a-45fd-99d3-cdeb0304d4a7';
 const days = [-6, -5, -4].map((offset) => addDays(todayIn('UTC'), offset));
 let userId: string;
