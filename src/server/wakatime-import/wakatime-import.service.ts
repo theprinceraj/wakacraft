@@ -19,8 +19,11 @@ const BUDGET_MS = 45_000;
 const INGEST_CHUNK = 1000;
 /** When WakaTime fails without saying how long to wait. */
 const DEFAULT_RETRY_SECONDS = 60;
-/** Secret API keys carry this prefix; WakaTime stops accepting them outside editor plugins on November 1, 2026. */
-const API_KEY_PREFIX = 'waka_';
+/**
+ * A secret API key is `waka_` + a UUID; WakaTime stops accepting them outside editor plugins on November 1, 2026.
+ * OAuth tokens share the prefix (`waka_tok_…`), so match the whole shape, not just `waka_`.
+ */
+const SECRET_API_KEY = /^waka_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REJECTED_TOKEN =
 	'WakaTime rejected that token. Create a personal OAuth token at wakatime.com/oauth — your secret API key no longer works here.';
 
@@ -55,7 +58,7 @@ export type WakatimeImportResponse = ReturnType<typeof toResponse>;
 class WakatimeImportService {
 	/** Checks the token against WakaTime, records what to fetch, and starts working in the background. */
 	public async start(userId: string, token: string) {
-		if (token.startsWith(API_KEY_PREFIX)) {
+		if (SECRET_API_KEY.test(token)) {
 			throw new BadRequestException(
 				'That is a WakaTime secret API key, which WakaTime only accepts from editor plugins. Create a personal OAuth token at wakatime.com/oauth instead.',
 			);
