@@ -21,7 +21,7 @@ export function AuthForm({ socialProviders }: { socialProviders: Provider[] }) {
 
 	if (!socialProviders.length) {
 		return (
-			<p className="rounded-md border border-dashed px-3 py-3 text-xs text-muted-foreground">
+			<p className="rounded-2xl bg-background px-4 py-3 text-[13px] text-muted-foreground">
 				No sign-in provider is configured. Set <code className="tabular">GITHUB_CLIENT_ID</code> and{' '}
 				<code className="tabular">GITHUB_CLIENT_SECRET</code> (see <code className="tabular">.env.example</code>).
 			</p>

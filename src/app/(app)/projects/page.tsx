@@ -1,12 +1,18 @@
-import { FolderGit2 } from 'lucide-react';
+import { ArrowRight, FolderGit2 } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
 
-import { Panel, PanelEmpty } from '@/components/dashboard/panel';
+import { PageHeader } from '@/components/app/page-header';
+import { EmptyState, PageSkeleton } from '@/components/app/states';
+import { seriesColor } from '@/components/dashboard/colors';
+import { StatTile } from '@/components/dashboard/stat-tile';
+import { ProjectList } from '@/components/projects/project-list';
+import { Button } from '@/components/ui/button';
 import { requireSession } from '@/lib/auth/session';
-import { formatDay, formatDuration } from '@/lib/format';
-import { statsService } from '@/server/stats/stats.service';
+import { formatDuration } from '@/lib/format';
+import { localDateOf } from '@/lib/util/Time';
 import { projectService } from '@/server/project/project.service';
+import { statsService } from '@/server/stats/stats.service';
 
 import type { Metadata } from 'next';
 
@@ -14,7 +20,7 @@ export const metadata: Metadata = { title: 'Projects' };
 
 export default function ProjectsPage() {
 	return (
-		<Suspense fallback={<div className="h-96 animate-pulse rounded-lg border bg-card/50" />}>
+		<Suspense fallback={<PageSkeleton rows={1} />}>
 			<Projects />
 		</Suspense>
 	);
@@ -22,68 +28,70 @@ export default function ProjectsPage() {
 
 async function Projects() {
 	const session = await requireSession('/projects');
-	const [projects, stats] = await Promise.all([
+	const [projects, stats, settings] = await Promise.all([
 		projectService.list(session.user.id),
 		statsService.getStats(session.user.id, 'last_30_days', {}),
+		statsService.resolveSettings(session.user.id),
 	]);
 	const recent = new Map(stats.data.projects.map((project) => [project.name, project.total_seconds]));
+	const localDate = (date: Date) => localDateOf(date.getTime() / 1000, settings.timezone);
+
+	const header = (
+		<PageHeader title="Projects" description="Created automatically from your editor activity. Nothing to set up." />
+	);
+
+	if (!projects.length) {
+		return (
+			<>
+				{header}
+				<EmptyState
+					icon={FolderGit2}
+					title="Your projects will appear here"
+					action={
+						<Button asChild size="lg">
+							<Link href="/settings#editor">
+								Connect your editor <ArrowRight />
+							</Link>
+						</Button>
+					}
+				>
+					They&apos;re created automatically after your first heartbeat, named after the folder you&apos;re working in.
+				</EmptyState>
+			</>
+		);
+	}
+
+	// Active projects take palette slots in order of recent time, as they do on the dashboard; the rest stay neutral.
+	const byTime = [...recent.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+	const rows = projects.map((project) => {
+		const rank = byTime.indexOf(project.name);
+		return {
+			id: project.id,
+			name: project.name,
+			color: project.color ?? (rank >= 0 ? seriesColor(rank) : 'var(--chart-8)'),
+			seconds: recent.get(project.name) ?? 0,
+			firstSeen: localDate(project.firstHeartbeatAt),
+			lastActive: localDate(project.lastHeartbeatAt),
+		};
+	});
+	const total = rows.reduce((sum, row) => sum + row.seconds, 0);
+	const active = rows.filter((row) => row.seconds > 0).length;
+	const top = rows.reduce((best, row) => (row.seconds > best.seconds ? row : best));
 
 	return (
-		<div className="flex flex-col gap-4">
-			<div>
-				<h1 className="text-lg font-semibold tracking-tight">Projects</h1>
-				<p className="text-xs text-muted-foreground">Created automatically from your editor activity.</p>
+		<>
+			{header}
+			<div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+				<StatTile label="Tracked projects" value={rows.length} hint={`${active} active in the last 30 days`} />
+				<StatTile label="Last 30 days" value={formatDuration(total)} hint="Across all projects" />
+				<StatTile
+					label="Most active"
+					value={top.seconds ? top.name : '—'}
+					hint={top.seconds ? formatDuration(top.seconds) : 'Nothing in the last 30 days'}
+					className="max-md:col-span-2"
+				/>
 			</div>
-			<Panel label={`${projects.length} projects`} bodyClassName="p-0">
-				{projects.length ? (
-					<table className="w-full text-sm">
-						<thead>
-							<tr className="border-b text-left text-[10.5px] tracking-[0.12em] text-muted-foreground uppercase">
-								<th className="px-3.5 py-2 font-medium">Project</th>
-								<th className="px-3.5 py-2 font-medium">Last 30 days</th>
-								<th className="hidden px-3.5 py-2 font-medium sm:table-cell">First seen</th>
-								<th className="px-3.5 py-2 font-medium">Last active</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y">
-							{projects.map((project) => (
-								<tr key={project.id} className="hover:bg-accent/40">
-									<td className="px-3.5 py-2.5">
-										<Link
-											href={`/projects/${encodeURIComponent(project.name)}`}
-											className="flex items-center gap-2 hover:text-ember"
-										>
-											<FolderGit2
-												className="size-3.5 text-muted-foreground"
-												style={project.color ? { color: project.color } : undefined}
-												aria-hidden
-											/>
-											<span className="truncate">{project.name}</span>
-										</Link>
-									</td>
-									<td className="tabular px-3.5 py-2.5 text-xs">{formatDuration(recent.get(project.name) ?? 0)}</td>
-									<td className="tabular hidden px-3.5 py-2.5 text-xs text-muted-foreground sm:table-cell">
-										{formatDay(project.firstHeartbeatAt.toISOString().slice(0, 10), {
-											month: 'short',
-											day: 'numeric',
-											year: 'numeric',
-										})}
-									</td>
-									<td className="tabular px-3.5 py-2.5 text-xs text-muted-foreground">
-										{formatDay(project.lastHeartbeatAt.toISOString().slice(0, 10), {
-											month: 'short',
-											day: 'numeric',
-											year: 'numeric',
-										})}
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				) : (
-					<PanelEmpty>No projects yet — they appear after your first heartbeat.</PanelEmpty>
-				)}
-			</Panel>
-		</div>
+			<ProjectList projects={rows} />
+		</>
 	);
 }

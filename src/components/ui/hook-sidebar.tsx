@@ -132,10 +132,7 @@ export function HookSidebar({
 	return (
 		<nav data-slot="hook-sidebar" aria-label={label} className={cn('flex flex-col', className)} {...props}>
 			{label && (
-				<span
-					data-slot="hook-sidebar-label"
-					className="pb-3 pl-0.5 pr-2 font-sans text-sm font-medium uppercase tracking-wide text-foreground"
-				>
+				<span data-slot="hook-sidebar-label" className="pb-1.5 pl-5 pr-2 font-sans text-xs text-muted-foreground">
 					{label}
 				</span>
 			)}
@@ -172,7 +169,7 @@ export function HookSidebar({
 						onClick: () => select(index),
 						className: cn(
 							'rounded-lg py-1.5 pl-5 pr-2 text-left text-sm transition-colors duration-200 motion-reduce:transition-none',
-							isActive ? 'text-foreground' : 'text-foreground/50 hover:text-foreground/80',
+							isActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
 						),
 					};
 

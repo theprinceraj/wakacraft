@@ -6,16 +6,10 @@ import type { Breakdown } from '@/server/dashboard/dashboard.service';
 import type { StatTotal } from '@/server/stats/engine';
 
 /** Ranges the Insights page offers, keyed by their stats-range value. */
-export const InsightRanges = {
-	last_7_days: '7D',
-	last_30_days: '30D',
-	last_6_months: '6M',
-	last_year: '1Y',
-	all_time: 'All',
-} as const;
-export type InsightRangeKey = keyof typeof InsightRanges;
+const INSIGHT_RANGES = ['last_7_days', 'last_30_days', 'last_6_months', 'last_year', 'all_time'] as const;
+export type InsightRangeKey = (typeof INSIGHT_RANGES)[number];
 export const isInsightRange = (value: unknown): value is InsightRangeKey =>
-	typeof value === 'string' && value in InsightRanges;
+	INSIGHT_RANGES.includes(value as InsightRangeKey);
 
 const TOP_LANGUAGES = 5;
 

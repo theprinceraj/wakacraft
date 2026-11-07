@@ -1,78 +1,82 @@
 import Link from 'next/link';
 
+import { Tag } from '@/components/app/chip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatDuration } from '@/lib/format';
+import { formatDuration, initialsOf } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 import type { leaderboardService } from '@/server/leaderboard/leaderboard.service';
 
 type Leaders = Awaited<ReturnType<typeof leaderboardService.publicLeaders>>;
 
-const initials = (name: string) =>
-	name
-		.split(/\s+/)
-		.map((word) => word[0])
-		.join('')
-		.slice(0, 2)
-		.toUpperCase();
-
 export function LeadersTable({ leaders, highlightUserId }: { leaders: Leaders['data']; highlightUserId?: string }) {
 	if (!leaders.length) {
-		return <p className="px-4 py-10 text-center text-xs text-muted-foreground">Nobody has coded in this range yet.</p>;
+		return (
+			<p className="border-t px-4 py-10 text-center text-sm text-muted-foreground">
+				Nobody has coded in this range yet.
+			</p>
+		);
 	}
-	const max = leaders[0].running_total.total_seconds;
+	const max = Math.max(1, ...leaders.map((entry) => entry.running_total.total_seconds));
 
 	return (
-		<ol className="divide-y">
+		<ol className="divide-y border-t">
 			{leaders.map(({ rank, running_total: total, user }) => {
 				const name = user.full_name ?? user.username ?? 'Anonymous';
+				const isYou = user.id === highlightUserId;
 				return (
 					<li
 						key={user.id}
 						className={cn(
-							'grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5',
-							user.id === highlightUserId && 'bg-ember/5',
+							'grid grid-cols-[1.5rem_2.25rem_minmax(0,1fr)_4.875rem] items-center gap-3 px-5.5 py-3.5 sm:px-7',
+							isYou && 'bg-ember/11',
 						)}
 					>
-						<span className={cn('tabular text-center text-sm', rank <= 3 ? 'text-ember' : 'text-muted-foreground')}>
+						<span
+							className={cn(
+								'text-center text-[15px] font-semibold tabular-nums',
+								rank <= 3 ? 'text-ember-text' : 'text-muted-foreground',
+							)}
+						>
 							{rank}
 						</span>
-						<div className="flex min-w-0 items-center gap-3">
-							<Avatar className="size-8">
-								{user.photo ? <AvatarImage src={user.photo} alt="" /> : null}
-								<AvatarFallback className="bg-muted text-[11px]">{initials(name)}</AvatarFallback>
-							</Avatar>
-							<div className="min-w-0 flex-1">
-								<p className="flex items-center gap-2 truncate text-sm">
-									{user.username ? (
-										<Link href={`/@${user.username}`} className="truncate hover:text-ember">
-											{name}
-										</Link>
-									) : (
-										<span className="truncate">{name}</span>
-									)}
-									{user.is_hireable ? (
-										<span className="shrink-0 rounded-full bg-success/15 px-1.5 text-[10px] text-success">
-											hireable
-										</span>
-									) : null}
-								</p>
-								<div className="mt-1 h-1 overflow-hidden rounded-full bg-white/5">
-									<div
-										className="h-full rounded-full bg-ember/70"
-										style={{ width: `${(total.total_seconds / max) * 100}%` }}
-									/>
-								</div>
-								{total.languages.length ? (
-									<p className="mt-1 truncate text-[11px] text-muted-foreground">
-										{total.languages.map((language) => language.name).join(' · ')}
-									</p>
-								) : null}
+						<Avatar className="size-9">
+							{user.photo ? <AvatarImage src={user.photo} alt="" /> : null}
+							<AvatarFallback className="bg-accent text-xs font-semibold">{initialsOf(name)}</AvatarFallback>
+						</Avatar>
+						<div className="min-w-0">
+							<div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+								{user.username ? (
+									<Link
+										href={`/@${user.username}`}
+										className="max-w-full truncate font-medium transition-colors hover:text-ember-text"
+									>
+										{name}
+									</Link>
+								) : (
+									<span className="max-w-full truncate font-medium">{name}</span>
+								)}
+								{isYou ? <Tag tone="ember">You</Tag> : null}
+								{user.is_hireable ? <Tag tone="good">Hireable</Tag> : null}
 							</div>
+							<div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-track">
+								<div
+									className="h-full rounded-full"
+									style={{
+										width: `${(total.total_seconds / max) * 100}%`,
+										background: isYou ? 'var(--ember)' : 'var(--bar)',
+									}}
+								/>
+							</div>
+							{total.languages.length ? (
+								<p className="mt-1.25 truncate text-xs text-muted-foreground">
+									{total.languages.map((language) => language.name).join(' · ')}
+								</p>
+							) : null}
 						</div>
 						<div className="text-right">
-							<p className="tabular text-sm">{formatDuration(total.total_seconds)}</p>
-							<p className="tabular text-[11px] text-muted-foreground">{formatDuration(total.daily_average)}/day</p>
+							<p className="font-semibold tabular-nums">{formatDuration(total.total_seconds)}</p>
+							<p className="text-xs text-muted-foreground tabular-nums">{formatDuration(total.daily_average)}/day</p>
 						</div>
 					</li>
 				);

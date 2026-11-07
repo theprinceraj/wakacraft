@@ -1,11 +1,15 @@
-import { Pencil, Receipt } from 'lucide-react';
-import Link from 'next/link';
+import { Pencil, Plus } from 'lucide-react';
 import { Suspense } from 'react';
 
-import { Panel } from '@/components/dashboard/panel';
+import { PageHeader } from '@/components/app/page-header';
+import { PageSkeleton } from '@/components/app/states';
+import { StatTile } from '@/components/dashboard/stat-tile';
 import { ClientDialog, NewInvoiceDialog } from '@/components/invoices/invoice-dialogs';
+import { InvoiceList } from '@/components/invoices/invoice-list';
 import { Button } from '@/components/ui/button';
 import { requireSession } from '@/lib/auth/session';
+import { formatMoney } from '@/lib/format';
+import { InvoiceStatuses, type InvoiceStatus } from '@/lib/util/Invoices';
 import { todayIn } from '@/lib/util/Time';
 import { invoiceService } from '@/server/invoice/invoice.service';
 import { projectService } from '@/server/project/project.service';
@@ -15,14 +19,25 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Invoices' };
 
-const money = (amount: number, currency: string) =>
-	new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
-
 export default function InvoicesPage() {
 	return (
-		<Suspense fallback={<div className="h-96 animate-pulse rounded-lg border bg-card/50" />}>
+		<Suspense fallback={<PageSkeleton rows={1} />}>
 			<Invoices />
 		</Suspense>
+	);
+}
+
+const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
+
+/** Clients can bill in different currencies, and those can't be added together. */
+function sumByCurrency(invoices: { total: number; currency: string }[]) {
+	const totals = new Map<string, number>();
+	for (const invoice of invoices) totals.set(invoice.currency, (totals.get(invoice.currency) ?? 0) + invoice.total);
+	if (!totals.size) return '—';
+	return (
+		<span className="whitespace-normal">
+			{[...totals].map(([currency, total]) => formatMoney(total, currency)).join(' + ')}
+		</span>
 	);
 }
 
@@ -36,88 +51,140 @@ async function Invoices() {
 	]);
 	const today = todayIn(settings.timezone);
 	const projectNames = projects.map((project) => project.name);
+	const withStatus = (status: InvoiceStatus) => invoices.data.filter((invoice) => invoice.status === status);
+	const sent = withStatus(InvoiceStatuses.Sent);
+	const paid = withStatus(InvoiceStatuses.Paid);
+	const drafts = withStatus(InvoiceStatuses.Draft);
+
+	const newInvoice = (
+		<NewInvoiceDialog clients={clients.data} defaultStart={`${today.slice(0, 7)}-01`} defaultEnd={today} />
+	);
+	const addClient = (
+		<ClientDialog
+			projects={projectNames}
+			trigger={
+				<Button size="sm" variant="outline">
+					<Plus /> Add client
+				</Button>
+			}
+		/>
+	);
+
+	const clientList = (
+		<aside className="flex min-w-0 flex-col gap-3 lg:col-span-4">
+			<div className="flex min-h-10 items-center justify-between gap-3">
+				<h2 className="text-lg font-semibold tracking-[-0.025em]">Clients</h2>
+				{addClient}
+			</div>
+			{clients.data.length ? (
+				<ul className="flex flex-col gap-2.5">
+					{clients.data.map((client) => (
+						<li key={client.id} className="tile flex items-center gap-3 py-4 pr-3.5 pl-5.5">
+							<div className="min-w-0 flex-1">
+								<p className="truncate font-semibold">{client.name}</p>
+								<p className="truncate text-xs text-muted-foreground tabular-nums">
+									{formatMoney(client.hourly_rate, client.currency)}/h · {plural(client.projects.length, 'project')}
+								</p>
+							</div>
+							<ClientDialog
+								projects={projectNames}
+								client={client}
+								trigger={
+									<Button
+										size="icon"
+										variant="ghost"
+										className="text-muted-foreground"
+										aria-label={`Edit ${client.name}`}
+									>
+										<Pencil />
+									</Button>
+								}
+							/>
+						</li>
+					))}
+				</ul>
+			) : (
+				<p className="tile px-5 py-8 text-center text-[13px] text-muted-foreground">No clients yet.</p>
+			)}
+		</aside>
+	);
 
 	return (
-		<div className="grid gap-4 lg:grid-cols-12">
-			<div className="flex flex-col gap-3 lg:col-span-8">
-				<div className="flex items-end justify-between">
-					<div>
-						<h1 className="text-lg font-semibold tracking-tight">Invoices</h1>
-						<p className="text-xs text-muted-foreground">Bill tracked time to clients at their hourly rate.</p>
-					</div>
-					<NewInvoiceDialog clients={clients.data} defaultStart={`${today.slice(0, 7)}-01`} defaultEnd={today} />
-				</div>
-				<Panel label={`${invoices.data.length} invoices`} bodyClassName="p-0">
-					{invoices.data.length ? (
-						<ul className="divide-y">
-							{invoices.data.map((invoice) => (
-								<li key={invoice.id}>
-									<Link
-										href={`/invoices/${invoice.id}`}
-										className="grid grid-cols-[5rem_minmax(0,1fr)_auto_auto] items-center gap-3 px-3.5 py-2.5 text-sm hover:bg-accent/40"
-									>
-										<span className="tabular text-xs text-muted-foreground">{invoice.number}</span>
-										<span className="truncate">{invoice.client.name}</span>
-										<span className="rounded-full bg-muted px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
-											{invoice.status}
-										</span>
-										<span className="tabular">{money(invoice.total, invoice.currency)}</span>
-									</Link>
-								</li>
-							))}
-						</ul>
-					) : (
-						<div className="flex flex-col items-center gap-2 px-4 py-12 text-center text-xs text-muted-foreground">
-							<Receipt className="size-5 text-ember" aria-hidden />
-							{clients.data.length
-								? 'No invoices yet — create one from tracked time.'
-								: 'Add a client to start invoicing.'}
-						</div>
-					)}
-				</Panel>
-			</div>
+		<>
+			<PageHeader
+				title="Invoices"
+				description="Bill tracked time to clients at their hourly rate."
+				actions={clients.data.length ? newInvoice : undefined}
+			/>
 
-			<div className="flex flex-col gap-3 lg:col-span-4">
-				<div className="flex items-center justify-between">
-					<h2 className="text-sm font-medium">Clients</h2>
-					<ClientDialog
-						projects={projectNames}
-						trigger={
-							<Button size="sm" variant="outline">
-								Add client
-							</Button>
-						}
-					/>
+			{invoices.data.length ? (
+				<div className="flex flex-col gap-4">
+					<div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+						<StatTile
+							label="Outstanding"
+							value={sumByCurrency(sent)}
+							hint={`${plural(sent.length, 'invoice')} sent, not yet paid`}
+						/>
+						<StatTile label="Paid" value={sumByCurrency(paid)} hint={plural(paid.length, 'invoice')} />
+						<StatTile
+							label="Drafts"
+							value={sumByCurrency(drafts)}
+							hint={`${plural(drafts.length, 'invoice')} not sent yet`}
+							className="max-md:col-span-2"
+						/>
+					</div>
+					<div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+						<div className="min-w-0 lg:col-span-8">
+							<InvoiceList
+								invoices={invoices.data.map((invoice) => ({
+									id: invoice.id,
+									number: invoice.number,
+									clientName: invoice.client.name,
+									status: invoice.status,
+									total: invoice.total,
+									currency: invoice.currency,
+									start: invoice.start,
+									end: invoice.end,
+								}))}
+							/>
+						</div>
+						{clientList}
+					</div>
 				</div>
-				{clients.data.length ? (
-					<ul className="flex flex-col gap-2">
-						{clients.data.map((client) => (
-							<li key={client.id} className="flex items-center gap-3 rounded-lg border bg-card/80 px-3.5 py-3">
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm">{client.name}</p>
-									<p className="tabular text-[11px] text-muted-foreground">
-										{money(client.hourly_rate, client.currency)}/h · {client.projects.length} project
-										{client.projects.length === 1 ? '' : 's'}
-									</p>
-								</div>
-								<ClientDialog
-									projects={projectNames}
-									client={client}
-									trigger={
-										<Button size="icon" variant="ghost" className="size-7" aria-label={`Edit ${client.name}`}>
-											<Pencil />
-										</Button>
-									}
-								/>
-							</li>
-						))}
-					</ul>
-				) : (
-					<p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-						No clients yet.
-					</p>
-				)}
-			</div>
-		</div>
+			) : (
+				<div className="flex flex-col gap-4">
+					<ol className="grid gap-4 md:grid-cols-3">
+						<li className={`tile flex flex-col gap-10 p-5.5 sm:p-7 ${clients.data.length ? '' : 'tile-ink'}`}>
+							<p className="font-mono text-[13px] text-muted-foreground">01</p>
+							<div>
+								<h2 className="text-lg font-semibold tracking-[-0.025em]">Add a client</h2>
+								<p className="mt-1 text-[13px] text-muted-foreground">
+									Set an hourly rate and choose which projects you bill to them.
+								</p>
+							</div>
+						</li>
+						<li className={`tile flex flex-col gap-10 p-5.5 sm:p-7 ${clients.data.length ? 'tile-ink' : ''}`}>
+							<p className="font-mono text-[13px] text-muted-foreground">02</p>
+							<div>
+								<h2 className="text-lg font-semibold tracking-[-0.025em]">Create an invoice</h2>
+								<p className="mt-1 text-[13px] text-muted-foreground">
+									Pick a client and a period. wakacraft works out the time and the amount.
+								</p>
+							</div>
+						</li>
+						<li className="tile flex flex-col gap-10 p-5.5 sm:p-7">
+							<p className="font-mono text-[13px] text-muted-foreground">03</p>
+							<div>
+								<h2 className="text-lg font-semibold tracking-[-0.025em]">Print or save as PDF</h2>
+								<p className="mt-1 text-[13px] text-muted-foreground">
+									A clean document your client can pay from, with no dashboard around it.
+								</p>
+							</div>
+						</li>
+					</ol>
+					<div className="grid grid-cols-1 lg:grid-cols-12">{clientList}</div>
+				</div>
+			)}
+		</>
 	);
 }

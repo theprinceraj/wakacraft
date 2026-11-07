@@ -1,8 +1,11 @@
-import { ArrowLeft, LayoutDashboard, Plus } from 'lucide-react';
+import { ArrowUpRight, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { Tag } from '@/components/app/chip';
+import { PageHeader } from '@/components/app/page-header';
+import { PageSkeleton } from '@/components/app/states';
 import { Panel } from '@/components/dashboard/panel';
 import { InviteLink } from '@/components/leaderboards/board-actions';
 import {
@@ -16,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { requireSession } from '@/lib/auth/session';
 import { getBaseUrl } from '@/lib/base-url';
+import { initialsOf } from '@/lib/format';
 import { HttpError } from '@/lib/http/errors';
 import { OrgRoles } from '@/lib/util/Orgs';
 import { orgService } from '@/server/org/org.service';
@@ -23,7 +27,7 @@ import { projectService } from '@/server/project/project.service';
 
 export default function OrgPage({ params }: PageProps<'/orgs/[org]'>) {
 	return (
-		<Suspense fallback={<div className="h-96 animate-pulse rounded-lg border bg-card/50" />}>
+		<Suspense fallback={<PageSkeleton stats={false} rows={1} />}>
 			<Org params={params} />
 		</Suspense>
 	);
@@ -56,99 +60,120 @@ async function Org({ params }: Pick<PageProps<'/orgs/[org]'>, 'params'>) {
 		(role !== OrgRoles.Admin || data.is_owner);
 
 	return (
-		<div className="mx-auto flex max-w-5xl flex-col gap-4">
-			<Link href="/orgs" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-				<ArrowLeft className="size-3" /> Teams
-			</Link>
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<div className="flex items-center gap-2">
-					<h1 className="text-lg font-semibold tracking-tight">{data.name}</h1>
-					{data.can_manage ? <RenameOrgButton orgId={data.id} name={data.name} /> : null}
-					<span className="rounded-full bg-muted px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
-						{data.role}
+		<div className="mx-auto max-w-5xl">
+			<PageHeader
+				back={{ href: '/orgs', label: 'Teams' }}
+				title={data.name}
+				titleAction={data.can_manage ? <RenameOrgButton orgId={data.id} name={data.name} /> : null}
+				description={
+					<span className="flex flex-wrap items-center gap-2 text-sm">
+						<Tag tone={data.role === OrgRoles.Owner ? 'ember' : 'neutral'} className="capitalize">
+							{data.role}
+						</Tag>
+						{members.total} member{members.total === 1 ? '' : 's'} · {dashboards.data.length} dashboard
+						{dashboards.data.length === 1 ? '' : 's'}
 					</span>
-				</div>
-				<LeaveOrgButton orgId={data.id} isOwner={data.is_owner} />
-			</div>
+				}
+				actions={<LeaveOrgButton orgId={data.id} isOwner={data.is_owner} />}
+			/>
 
-			{data.invite_code ? (
-				<Panel label="Invite link" meta={<RegenerateInviteButton orgId={data.id} />}>
-					<InviteLink url={`${baseUrl}/orgs/join/${data.invite_code}`} />
-				</Panel>
-			) : null}
+			<div className="flex flex-col gap-4">
+				{data.invite_code ? (
+					<Panel
+						label="Invite link"
+						description="Anyone with this link can join the team."
+						tone="ink"
+						meta={<RegenerateInviteButton orgId={data.id} />}
+					>
+						<InviteLink url={`${baseUrl}/orgs/join/${data.invite_code}`} />
+					</Panel>
+				) : null}
 
-			<div className="grid gap-4 lg:grid-cols-12">
-				<div className="flex flex-col gap-3 lg:col-span-7">
-					<div className="flex items-center justify-between">
-						<h2 className="text-sm font-medium">Dashboards</h2>
-						{data.can_manage ? (
-							<DashboardDialog
-								orgId={data.id}
-								members={memberOptions}
-								projects={projectNames}
-								trigger={
-									<Button size="sm" variant="outline">
-										<Plus /> New dashboard
-									</Button>
-								}
-							/>
-						) : null}
+				<div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+					<div className="flex min-w-0 flex-col gap-3 lg:col-span-7">
+						<div className="flex min-h-8 items-center justify-between gap-3">
+							<h2 className="text-lg font-semibold tracking-[-0.025em]">Dashboards</h2>
+							{data.can_manage ? (
+								<DashboardDialog
+									orgId={data.id}
+									members={memberOptions}
+									projects={projectNames}
+									trigger={
+										<Button size="sm" variant="outline">
+											<Plus /> New dashboard
+										</Button>
+									}
+								/>
+							) : null}
+						</div>
+						{dashboards.data.length ? (
+							<ul className="flex flex-col gap-2.5">
+								{dashboards.data.map((dashboard) => (
+									<li key={dashboard.id}>
+										<Link
+											href={`/orgs/${data.id}/dashboards/${dashboard.id}`}
+											className="tile group/card flex items-start gap-3 p-5.5 transition-colors hover:bg-accent"
+										>
+											<span className="min-w-0 flex-1">
+												<span className="block truncate text-base font-semibold">{dashboard.name}</span>
+												<span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
+													{dashboard.member_ids.length ? `${dashboard.members_count} members` : 'Everyone'} ·{' '}
+													{dashboard.projects.length ? dashboard.projects.join(', ') : 'all projects'}
+												</span>
+											</span>
+											<ArrowUpRight
+												className="size-5 shrink-0 text-foreground/70 transition-transform group-hover/card:translate-x-0.5 group-hover/card:-translate-y-0.5"
+												aria-hidden
+											/>
+										</Link>
+									</li>
+								))}
+							</ul>
+						) : (
+							<p className="tile px-5 py-8 text-center text-[13px] text-muted-foreground">
+								No dashboards yet.{data.can_manage ? ' Create one to see the team’s time together.' : ''}
+							</p>
+						)}
 					</div>
-					{dashboards.data.length ? (
-						<ul className="flex flex-col gap-2">
-							{dashboards.data.map((dashboard) => (
-								<li key={dashboard.id}>
-									<Link
-										href={`/orgs/${data.id}/dashboards/${dashboard.id}`}
-										className="flex items-center gap-3 rounded-lg border bg-card/80 px-3.5 py-3 hover:border-ember/40"
-									>
-										<LayoutDashboard className="size-4 text-muted-foreground" aria-hidden />
-										<div className="min-w-0 flex-1">
-											<p className="truncate text-sm">{dashboard.name}</p>
-											<p className="truncate text-[11px] text-muted-foreground">
-												{dashboard.member_ids.length ? `${dashboard.members_count} members` : 'Everyone'} ·{' '}
-												{dashboard.projects.length ? dashboard.projects.join(', ') : 'all projects'}
-											</p>
-										</div>
-									</Link>
+
+					<Panel label="Members" meta={members.total} className="lg:col-span-5" flush>
+						<ul className="divide-y border-t">
+							{members.data.map((member) => (
+								<li key={member.id} className="flex items-center gap-3 px-5.5 py-3">
+									<Avatar className="size-8">
+										{member.user.photo ? <AvatarImage src={member.user.photo} alt="" /> : null}
+										<AvatarFallback className="bg-accent text-[11px] font-semibold">
+											{initialsOf(member.user.full_name ?? member.user.display_name)}
+										</AvatarFallback>
+									</Avatar>
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-medium">
+											{member.user.full_name ?? member.user.display_name}
+											{member.id === session.user.id ? (
+												<span className="font-normal text-muted-foreground"> · you</span>
+											) : null}
+										</p>
+										<p className="truncate text-xs text-muted-foreground">
+											{member.user.email ?? (member.user.username ? `@${member.user.username}` : '')}
+										</p>
+									</div>
+									{canEdit(member.role, member.id) ? (
+										<MemberControls
+											orgId={data.id}
+											userId={member.id}
+											role={member.role}
+											name={member.user.full_name ?? member.user.display_name}
+										/>
+									) : (
+										<Tag tone={member.role === OrgRoles.Owner ? 'ember' : 'neutral'} className="capitalize">
+											{member.role}
+										</Tag>
+									)}
 								</li>
 							))}
 						</ul>
-					) : (
-						<p className="rounded-lg border border-dashed px-3 py-6 text-center text-xs text-muted-foreground">
-							No dashboards yet.
-						</p>
-					)}
+					</Panel>
 				</div>
-
-				<Panel label={`${members.total} members`} className="lg:col-span-5" bodyClassName="p-0">
-					<ul className="divide-y">
-						{members.data.map((member) => (
-							<li key={member.id} className="flex items-center gap-3 px-3.5 py-2.5">
-								<Avatar className="size-7">
-									{member.user.photo ? <AvatarImage src={member.user.photo} alt="" /> : null}
-									<AvatarFallback className="text-[10px]">
-										{(member.user.full_name ?? member.user.display_name).slice(0, 2).toUpperCase()}
-									</AvatarFallback>
-								</Avatar>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm">
-										{member.user.full_name ?? member.user.display_name}
-										{member.id === session.user.id ? <span className="text-muted-foreground"> · you</span> : null}
-									</p>
-									<p className="truncate text-[11px] text-muted-foreground">
-										{member.user.email ?? (member.user.username ? `@${member.user.username}` : '')}
-									</p>
-								</div>
-								{canEdit(member.role, member.id) ? (
-									<MemberControls orgId={data.id} userId={member.id} role={member.role} />
-								) : (
-									<span className="text-[11px] capitalize text-muted-foreground">{member.role}</span>
-								)}
-							</li>
-						))}
-					</ul>
-				</Panel>
 			</div>
 		</div>
 	);

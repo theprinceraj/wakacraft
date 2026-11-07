@@ -94,26 +94,26 @@ export function ImportExport() {
 	}
 
 	return (
-		<div className="grid gap-5 sm:grid-cols-2">
-			<div className="flex flex-col gap-2">
-				<p className="text-sm font-medium">Export</p>
-				<p className="text-xs text-muted-foreground">
+		<div className="grid gap-3 sm:grid-cols-2">
+			<div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-background p-4">
+				<p className="font-semibold">Export everything</p>
+				<p className="flex-1 text-[13px] text-muted-foreground">
 					Download everything as JSON in WakaTime&apos;s format. Links stay valid for 7 days.
 				</p>
-				<div className="mt-1 flex flex-wrap gap-2">
-					<Button size="sm" variant="outline" disabled={exporting !== null} onClick={() => startExport('heartbeats')}>
+				<div className="mt-2.5 flex flex-wrap gap-2">
+					<Button variant="outline" disabled={exporting !== null} onClick={() => startExport('heartbeats')}>
 						<Download /> {exporting === 'heartbeats' ? 'Preparing…' : 'Heartbeats'}
 					</Button>
-					<Button size="sm" variant="outline" disabled={exporting !== null} onClick={() => startExport('daily')}>
+					<Button variant="outline" disabled={exporting !== null} onClick={() => startExport('daily')}>
 						<Download /> {exporting === 'daily' ? 'Preparing…' : 'Daily summaries'}
 					</Button>
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-2">
-				<p className="text-sm font-medium">Import a WakaTime export</p>
-				<p className="text-xs text-muted-foreground">
-					In WakaTime, go to Settings → Account → Export and choose <em>heartbeats</em>, then upload the file here.
+			<div className="flex min-w-0 flex-col gap-1 rounded-2xl bg-background p-4">
+				<p className="font-semibold">Upload an export file</p>
+				<p className="flex-1 text-[13px] text-muted-foreground">
+					In WakaTime, go to Settings, Account, Export and choose <em>heartbeats</em>, then upload the file here.
 					wakacraft exports work too.
 				</p>
 				<input
@@ -128,8 +128,8 @@ export function ImportExport() {
 					}}
 				/>
 				<Button
-					size="sm"
-					className="mt-1 self-start"
+					variant="outline"
+					className="mt-2.5 self-start"
 					disabled={importState !== null}
 					onClick={() => input.current?.click()}
 				>
@@ -139,9 +139,9 @@ export function ImportExport() {
 						: 'Choose export file'}
 				</Button>
 				{importState ? (
-					<div className="h-1 overflow-hidden rounded-full bg-muted">
+					<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-track">
 						<div
-							className="h-full bg-ember transition-[width]"
+							className="h-full rounded-full bg-primary transition-[width]"
 							style={{ width: `${(importState.done / importState.total) * 100}%` }}
 						/>
 					</div>

@@ -1,6 +1,8 @@
 import { Plus, Target } from 'lucide-react';
 import { Suspense } from 'react';
 
+import { PageHeader } from '@/components/app/page-header';
+import { EmptyState, PageSkeleton } from '@/components/app/states';
 import { GoalCard } from '@/components/goals/goal-card';
 import { GoalDialog } from '@/components/goals/goal-dialog';
 import { Button } from '@/components/ui/button';
@@ -15,7 +17,7 @@ export const metadata: Metadata = { title: 'Goals' };
 
 export default function GoalsPage() {
 	return (
-		<Suspense fallback={<div className="h-96 animate-pulse rounded-lg border bg-card/50" />}>
+		<Suspense fallback={<PageSkeleton stats={false} />}>
 			<Goals />
 		</Suspense>
 	);
@@ -38,7 +40,7 @@ async function Goals() {
 		<GoalDialog
 			facets={facets}
 			trigger={
-				<Button size="sm">
+				<Button size="lg" className="pl-4">
 					<Plus /> New goal
 				</Button>
 			}
@@ -46,33 +48,23 @@ async function Goals() {
 	);
 
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex items-end justify-between gap-3">
-				<div>
-					<h1 className="text-lg font-semibold tracking-tight">Goals</h1>
-					<p className="text-xs text-muted-foreground">Daily and weekly targets, checked against your real activity.</p>
-				</div>
-				{goals.length ? newGoal : null}
-			</div>
-
+		<>
+			<PageHeader
+				title="Goals"
+				description="Daily and weekly targets, checked against your real activity."
+				actions={goals.length ? newGoal : undefined}
+			/>
 			{goals.length ? (
-				<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+				<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 					{goals.map((goal) => (
 						<GoalCard key={goal.id} goal={goal} facets={facets} />
 					))}
 				</div>
 			) : (
-				<div className="flex flex-col items-center gap-3 rounded-lg border border-dashed bg-card/40 px-6 py-16 text-center">
-					<Target className="size-6 text-ember" aria-hidden />
-					<div>
-						<p className="text-sm font-medium">Set your first goal</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-							e.g. code at least 2 hours a day, or at most 40 hours a week.
-						</p>
-					</div>
-					{newGoal}
-				</div>
+				<EmptyState icon={Target} title="Set your first goal" action={newGoal}>
+					Code at least 2 hours a day, keep a language going every week, or cap yourself at 40 hours.
+				</EmptyState>
 			)}
-		</div>
+		</>
 	);
 }

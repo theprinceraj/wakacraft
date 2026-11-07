@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { Segmented } from '@/components/app/segmented';
+import { SettingToggle } from '@/components/app/setting-toggle';
+import { useTheme } from '@/components/app/theme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 
 interface Preferences {
 	username: string | null;
@@ -21,6 +23,7 @@ const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 
 export function PreferencesForm({ initial, timezones }: { initial: Preferences; timezones: string[] }) {
 	const router = useRouter();
+	const { theme, setTheme } = useTheme();
 	const [values, setValues] = useState(initial);
 	const [errors, setErrors] = useState<Record<string, string[]>>({});
 	const [pending, setPending] = useState(false);
@@ -51,41 +54,41 @@ export function PreferencesForm({ initial, timezones }: { initial: Preferences; 
 	}
 
 	return (
-		<form onSubmit={save} className="grid max-w-xl gap-5">
-			<div className="grid gap-1.5">
-				<Label htmlFor="username" className="text-xs">
-					Username
-				</Label>
-				<Input
-					id="username"
-					value={values.username ?? ''}
-					onChange={(event) => setValues({ ...values, username: event.target.value })}
-					placeholder="your-handle"
-					aria-invalid={Boolean(errors.username)}
-				/>
-				{errors.username ? <p className="text-xs text-destructive">{errors.username[0]}</p> : null}
-			</div>
-
-			<div className="grid gap-1.5">
-				<Label className="text-xs">Timezone</Label>
-				<Select value={values.timezone} onValueChange={(timezone) => setValues({ ...values, timezone })}>
-					<SelectTrigger className="w-full">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent className="max-h-72">
-						{timezones.map((timezone) => (
-							<SelectItem key={timezone} value={timezone}>
-								{timezone}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-				<p className="text-xs text-muted-foreground">Days start at midnight in this timezone.</p>
-			</div>
-
-			<div className="grid grid-cols-2 gap-4">
+		<form onSubmit={save} className="grid gap-5">
+			<div className="grid gap-4 sm:grid-cols-2">
 				<div className="grid gap-1.5">
-					<Label className="text-xs">Week starts on</Label>
+					<Label htmlFor="username" className="text-[13px]">
+						Username
+					</Label>
+					<Input
+						id="username"
+						value={values.username ?? ''}
+						onChange={(event) => setValues({ ...values, username: event.target.value })}
+						placeholder="your-handle"
+						aria-invalid={Boolean(errors.username)}
+					/>
+					{errors.username ? <p className="text-[12.5px] text-destructive">{errors.username[0]}</p> : null}
+				</div>
+
+				<div className="grid gap-1.5">
+					<Label className="text-[13px]">Timezone</Label>
+					<Select value={values.timezone} onValueChange={(timezone) => setValues({ ...values, timezone })}>
+						<SelectTrigger className="w-full">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent className="max-h-72">
+							{timezones.map((timezone) => (
+								<SelectItem key={timezone} value={timezone}>
+									{timezone}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<p className="text-[12.5px] text-muted-foreground">Days start at midnight in this timezone.</p>
+				</div>
+
+				<div className="grid gap-1.5">
+					<Label className="text-[13px]">Week starts on</Label>
 					<Select
 						value={String(values.week_start_day)}
 						onValueChange={(day) => setValues({ ...values, week_start_day: Number(day) })}
@@ -102,17 +105,28 @@ export function PreferencesForm({ initial, timezones }: { initial: Preferences; 
 						</SelectContent>
 					</Select>
 				</div>
+				<div className="grid gap-1.5">
+					<span className="text-[13px] font-medium">Theme</span>
+					<Segmented
+						aria-label="Theme"
+						tone="background"
+						value={theme}
+						onValueChange={setTheme}
+						options={[
+							{ value: 'light', label: 'Light' },
+							{ value: 'dark', label: 'Dark' },
+							{ value: 'system', label: 'System' },
+						]}
+					/>
+				</div>
 			</div>
 
-			<label className="flex items-start justify-between gap-4 rounded-md border p-3">
-				<span>
-					<span className="block text-sm">Count only file saves</span>
-					<span className="block text-xs text-muted-foreground">
-						Ignore time spent only reading code. Off matches WakaTime&apos;s default.
-					</span>
-				</span>
-				<Switch checked={values.writes_only} onCheckedChange={(writes_only) => setValues({ ...values, writes_only })} />
-			</label>
+			<SettingToggle
+				title="Count only file saves"
+				hint="Ignore time spent only reading code. Off matches WakaTime's default."
+				checked={values.writes_only}
+				onCheckedChange={(writes_only) => setValues({ ...values, writes_only })}
+			/>
 
 			<Button type="submit" disabled={pending} className="justify-self-start">
 				{pending ? 'Saving…' : 'Save settings'}

@@ -15,11 +15,11 @@ export const metadata: Metadata = { title: 'Authorize app' };
 /** WakaTime's `GET /oauth/authorize`: the consent screen a third-party app sends you to. */
 export default function AuthorizePage({ searchParams }: PageProps<'/oauth/authorize'>) {
 	return (
-		<div className="canvas-grid flex min-h-full flex-1 flex-col items-center justify-center px-4 py-12">
+		<div className="flex min-h-full flex-1 flex-col items-center justify-center px-4 py-12">
 			<div className="mb-8 text-foreground">
 				<Logo />
 			</div>
-			<div className="w-full max-w-md rounded-lg border bg-card/80 p-6 shadow-2xl backdrop-blur">
+			<div className="tile w-full max-w-md p-7">
 				<Suspense fallback={<div className="h-48 animate-pulse" />}>
 					<Consent searchParams={searchParams} />
 				</Suspense>
@@ -64,7 +64,7 @@ async function Consent({ searchParams }: Pick<PageProps<'/oauth/authorize'>, 'se
 				<input key={key} type="hidden" name={key} value={value} />
 			))}
 			<div className="flex items-start gap-3">
-				<div className="grid size-9 shrink-0 place-items-center rounded-md bg-ember/15 text-ember">
+				<div className="grid size-9 shrink-0 place-items-center rounded-md bg-ember/12 text-ember-text">
 					<KeyRound className="size-4" aria-hidden />
 				</div>
 				<div className="min-w-0">

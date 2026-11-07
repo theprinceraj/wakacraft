@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { SettingToggle } from '@/components/app/setting-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 
 import type { UserResponse } from '@/server/user/user.response.dto';
 
@@ -80,7 +80,7 @@ export function PublicProfileForm({ user, baseUrl }: { user: UserResponse; baseU
 
 	const field = (key: keyof typeof text, label: string, placeholder = '') => (
 		<div className="grid gap-1.5">
-			<Label htmlFor={key} className="text-xs">
+			<Label htmlFor={key} className="text-[13px]">
 				{label}
 			</Label>
 			<Input
@@ -99,16 +99,18 @@ export function PublicProfileForm({ user, baseUrl }: { user: UserResponse; baseU
 					href={`/@${user.username}`}
 					target="_blank"
 					rel="noreferrer"
-					className="tabular inline-flex items-center gap-1.5 self-start text-xs text-ember hover:underline"
+					className="inline-flex max-w-full items-center gap-1.5 self-start font-mono text-xs font-medium text-ember-text hover:underline"
 				>
 					{baseUrl.replace(/^https?:\/\//, '')}/@{user.username} <ExternalLink className="size-3" />
 				</a>
 			) : (
-				<p className="text-xs text-muted-foreground">Set a username under Preferences to get a public profile URL.</p>
+				<p className="text-[13px] text-muted-foreground">
+					Set a username under Preferences to get a public profile URL.
+				</p>
 			)}
 
 			<div className="grid gap-1.5">
-				<Label htmlFor="bio" className="text-xs">
+				<Label htmlFor="bio" className="text-[13px]">
 					Bio
 				</Label>
 				<textarea
@@ -117,7 +119,7 @@ export function PublicProfileForm({ user, baseUrl }: { user: UserResponse; baseU
 					rows={2}
 					value={text.bio}
 					onChange={(event) => setText({ ...text, bio: event.target.value })}
-					className="rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					className="rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 				/>
 			</div>
 			<div className="grid gap-4 sm:grid-cols-2">
@@ -128,21 +130,21 @@ export function PublicProfileForm({ user, baseUrl }: { user: UserResponse; baseU
 				{field('linkedinUsername', 'LinkedIn')}
 			</div>
 
-			<div className="grid gap-2 sm:grid-cols-2">
-				{TOGGLES.map(([key, , label, hint]) => (
-					<label key={key} className="flex items-start justify-between gap-3 rounded-md border p-3">
-						<span>
-							<span className="block text-sm">{label}</span>
-							{hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
-						</span>
-						<Switch
+			<div>
+				<p className="font-semibold">What&apos;s visible</p>
+				<div className="mt-2 grid gap-2.5 sm:grid-cols-2">
+					{TOGGLES.map(([key, , label, hint]) => (
+						<SettingToggle
+							key={key}
+							title={label}
+							hint={hint}
 							checked={toggles[key]}
 							onCheckedChange={(checked) => setToggles({ ...toggles, [key]: checked })}
 							// Breakdowns are only shown alongside public coding time.
 							disabled={BREAKDOWNS.has(key) && !toggles.loggedTimePublic}
 						/>
-					</label>
-				))}
+					))}
+				</div>
 			</div>
 
 			<Button type="submit" disabled={pending} className="self-start">

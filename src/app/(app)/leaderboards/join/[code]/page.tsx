@@ -1,7 +1,8 @@
-import { Users } from 'lucide-react';
+import { Lock, LogOut } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
+import { InviteCard } from '@/components/app/invite-card';
 import { JoinBoardButton } from '@/components/leaderboards/board-actions';
 import { requireSession } from '@/lib/auth/session';
 import { leaderboardService } from '@/server/leaderboard/leaderboard.service';
@@ -22,15 +23,17 @@ async function Join({ params }: Pick<PageProps<'/leaderboards/join/[code]'>, 'pa
 	if (!board) notFound();
 
 	return (
-		<div className="mx-auto flex max-w-sm flex-col items-center gap-4 rounded-lg border bg-card/80 px-6 py-10 text-center">
-			<Users className="size-6 text-ember" aria-hidden />
-			<div>
-				<h1 className="text-lg font-semibold tracking-tight">Join “{board.name}”</h1>
-				<p className="mt-1 text-xs text-muted-foreground">
-					Members of this leaderboard will see your coding time and languages for the last 7 days.
-				</p>
-			</div>
-			<JoinBoardButton code={code} />
-		</div>
+		<InviteCard
+			name={board.name}
+			kind="A private leaderboard."
+			points={[
+				{ text: 'Members will see your coding time for the last 7 days' },
+				{ text: "They'll also see the languages you used" },
+				{ text: 'Project names and files stay private', icon: Lock },
+				{ text: 'You can leave at any time', icon: LogOut },
+			]}
+			join={<JoinBoardButton code={code} />}
+			cancelHref="/leaderboards"
+		/>
 	);
 }

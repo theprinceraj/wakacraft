@@ -5,36 +5,19 @@ import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
+import { Chip } from '@/components/app/chip';
+import { ConfirmDialog } from '@/components/app/confirm-dialog';
+import { Field } from '@/components/app/field';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+
+import { sendJson } from '@/lib/http/send-json';
 
 import type { OrgDashboardResponse } from '@/server/org/org.service';
 
 const base = (orgId: string) => `/api/v1/users/current/orgs/${orgId}`;
-
-async function send(url: string, method: string, body?: unknown) {
-	const response = await fetch(url, {
-		method,
-		headers: { 'content-type': 'application/json' },
-		body: body === undefined ? undefined : JSON.stringify(body),
-	});
-	const json = await response.json().catch(() => ({}));
-	if (!response.ok) throw new Error(json.error ?? 'Request failed');
-	return json;
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-	return (
-		<div className="grid gap-1.5">
-			<Label className="text-xs">{label}</Label>
-			{children}
-		</div>
-	);
-}
 
 function Chips({
 	options,
@@ -47,24 +30,19 @@ function Chips({
 	onChange: (next: string[]) => void;
 	empty: string;
 }) {
-	if (!options.length) return <p className="text-xs text-muted-foreground">{empty}</p>;
+	if (!options.length) return <p className="text-[13px] text-muted-foreground">{empty}</p>;
 	return (
-		<div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+		<div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto p-0.5">
 			{options.map((option) => {
 				const on = selected.includes(option.value);
 				return (
-					<button
+					<Chip
 						key={option.value}
-						type="button"
-						aria-pressed={on}
+						selected={on}
 						onClick={() => onChange(on ? selected.filter((v) => v !== option.value) : [...selected, option.value])}
-						className={cn(
-							'rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground',
-							on && 'border-ember/60 bg-ember/15 text-ember',
-						)}
 					>
 						{option.label}
-					</button>
+					</Chip>
 				);
 			})}
 		</div>
@@ -79,7 +57,7 @@ export function CreateOrgButton() {
 	async function create(event: React.FormEvent) {
 		event.preventDefault();
 		try {
-			const json = await send('/api/v1/users/current/orgs', 'POST', { name });
+			const json = await sendJson('/api/v1/users/current/orgs', 'POST', { name });
 			setOpen(false);
 			setName('');
 			router.push(`/orgs/${json.data.id}`);
@@ -91,11 +69,11 @@ export function CreateOrgButton() {
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button size="sm">
+				<Button size="lg" className="pl-4">
 					<Plus /> New team
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-sm">
+			<DialogContent aria-describedby={undefined}>
 				<DialogHeader>
 					<DialogTitle>New team</DialogTitle>
 				</DialogHeader>
@@ -104,10 +82,11 @@ export function CreateOrgButton() {
 						value={name}
 						onChange={(event) => setName(event.target.value)}
 						placeholder="Organization name"
+						aria-label="Organization name"
 						maxLength={80}
 						autoFocus
 					/>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-[13px] text-muted-foreground">
 						You&apos;ll get an invite link. Everyone who joins shows up on the team&apos;s dashboards.
 					</p>
 					<DialogFooter>
@@ -128,7 +107,7 @@ export function JoinOrgButton({ code }: { code: string }) {
 	async function join() {
 		setPending(true);
 		try {
-			const json = await send('/api/v1/users/current/orgs/join', 'POST', { code });
+			const json = await sendJson('/api/v1/users/current/orgs/join', 'POST', { code });
 			router.push(`/orgs/${json.data.id}`);
 		} catch (error) {
 			toast.error((error as Error).message);
@@ -137,8 +116,8 @@ export function JoinOrgButton({ code }: { code: string }) {
 	}
 
 	return (
-		<Button onClick={join} disabled={pending}>
-			{pending ? 'Joining…' : 'Join team'}
+		<Button size="lg" onClick={join} disabled={pending}>
+			{pending ? 'Joining…' : 'Join the team'}
 		</Button>
 	);
 }
@@ -151,7 +130,7 @@ export function RenameOrgButton({ orgId, name }: { orgId: string; name: string }
 	async function save(event: React.FormEvent) {
 		event.preventDefault();
 		try {
-			await send(base(orgId), 'PATCH', { name: draft });
+			await sendJson(base(orgId), 'PATCH', { name: draft });
 			setOpen(false);
 			router.refresh();
 		} catch (error) {
@@ -162,16 +141,22 @@ export function RenameOrgButton({ orgId, name }: { orgId: string; name: string }
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button size="icon" variant="ghost" className="size-7" aria-label="Rename team">
+				<Button size="icon" variant="ghost" className="text-muted-foreground" aria-label="Rename team">
 					<Pencil />
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-sm">
+			<DialogContent aria-describedby={undefined}>
 				<DialogHeader>
 					<DialogTitle>Rename team</DialogTitle>
 				</DialogHeader>
 				<form onSubmit={save} className="flex flex-col gap-4">
-					<Input value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={80} autoFocus />
+					<Input
+						value={draft}
+						onChange={(event) => setDraft(event.target.value)}
+						aria-label="Team name"
+						maxLength={80}
+						autoFocus
+					/>
 					<DialogFooter>
 						<Button type="submit" disabled={!draft.trim()}>
 							Save
@@ -186,74 +171,89 @@ export function RenameOrgButton({ orgId, name }: { orgId: string; name: string }
 export function RegenerateInviteButton({ orgId }: { orgId: string }) {
 	const router = useRouter();
 	return (
-		<Button
-			size="sm"
-			variant="ghost"
-			onClick={async () => {
-				try {
-					await send(base(orgId), 'PATCH', { regenerate_invite: true });
-					toast.success('New invite link created; the old one no longer works');
-					router.refresh();
-				} catch (error) {
-					toast.error((error as Error).message);
-				}
+		<ConfirmDialog
+			title="Create a new invite link?"
+			description="The current link stops working straight away."
+			action="Create new link"
+			onConfirm={async () => {
+				await sendJson(base(orgId), 'PATCH', { regenerate_invite: true });
+				toast.success('New invite link created; the old one no longer works');
+				router.refresh();
 			}}
-		>
-			<RefreshCw /> New link
-		</Button>
+			trigger={
+				<Button
+					size="sm"
+					variant="ghost"
+					className="text-ink-foreground hover:bg-ink-foreground/12 hover:text-ink-foreground"
+				>
+					<RefreshCw /> New link
+				</Button>
+			}
+		/>
 	);
 }
 
 export function LeaveOrgButton({ orgId, isOwner }: { orgId: string; isOwner: boolean }) {
 	const router = useRouter();
-	const [confirming, setConfirming] = useState(false);
 
 	async function leave() {
-		try {
-			await send(base(orgId), 'DELETE');
-			toast.success(isOwner ? 'Team deleted' : 'You left the team');
-			router.push('/orgs');
-			router.refresh();
-		} catch (error) {
-			toast.error((error as Error).message);
-		}
+		await sendJson(base(orgId), 'DELETE');
+		toast.success(isOwner ? 'Team deleted' : 'You left the team');
+		router.push('/orgs');
+		router.refresh();
 	}
 
-	return confirming ? (
-		<span className="flex items-center gap-2 text-xs">
-			{isOwner ? 'Delete the team and its dashboards?' : 'Leave this team?'}
-			<Button size="sm" variant="destructive" onClick={leave}>
-				{isOwner ? 'Delete' : 'Leave'}
-			</Button>
-			<Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-				Cancel
-			</Button>
-		</span>
-	) : (
-		<Button size="sm" variant="ghost" onClick={() => setConfirming(true)}>
-			{isOwner ? <Trash2 /> : <LogOut />} {isOwner ? 'Delete team' : 'Leave team'}
-		</Button>
+	return (
+		<ConfirmDialog
+			title={isOwner ? 'Delete this team?' : 'Leave this team?'}
+			description={
+				isOwner
+					? 'All its dashboards are deleted for everyone. Members keep their own coding time.'
+					: "Your time stops showing on its dashboards. You'll need a new invite to come back."
+			}
+			action={isOwner ? 'Delete team' : 'Leave team'}
+			onConfirm={leave}
+			trigger={
+				<Button variant="ghost" className="text-destructive hover:text-destructive">
+					{isOwner ? <Trash2 /> : <LogOut />} {isOwner ? 'Delete team' : 'Leave team'}
+				</Button>
+			}
+		/>
 	);
 }
 
 /** Role switch and remove button for one member row; shown only when the viewer may change that member. */
-export function MemberControls({ orgId, userId, role }: { orgId: string; userId: string; role: string }) {
+export function MemberControls({
+	orgId,
+	userId,
+	role,
+	name,
+}: {
+	orgId: string;
+	userId: string;
+	role: string;
+	name: string;
+}) {
 	const router = useRouter();
-	const [confirming, setConfirming] = useState(false);
 
-	const run = async (method: string, body?: unknown) => {
+	const memberUrl = `${base(orgId)}/members/${userId}`;
+	const changeRole = async (next: string) => {
 		try {
-			await send(`${base(orgId)}/members/${userId}`, method, body);
+			await sendJson(memberUrl, 'PATCH', { role: next });
 			router.refresh();
 		} catch (error) {
 			toast.error((error as Error).message);
 		}
 	};
+	const remove = async () => {
+		await sendJson(memberUrl, 'DELETE');
+		router.refresh();
+	};
 
 	return (
-		<div className="flex items-center gap-1">
-			<Select value={role} onValueChange={(next) => run('PATCH', { role: next })}>
-				<SelectTrigger size="sm" className="h-7 w-24 text-xs">
+		<div className="flex items-center gap-0.5">
+			<Select value={role} onValueChange={changeRole}>
+				<SelectTrigger size="sm" className="w-24 text-[13px]" aria-label={`Role for ${name}`}>
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
@@ -261,21 +261,17 @@ export function MemberControls({ orgId, userId, role }: { orgId: string; userId:
 					<SelectItem value="member">Member</SelectItem>
 				</SelectContent>
 			</Select>
-			{confirming ? (
-				<Button size="sm" variant="destructive" className="h-7" onClick={() => run('DELETE')}>
-					Remove
-				</Button>
-			) : (
-				<Button
-					size="icon"
-					variant="ghost"
-					className="size-7"
-					aria-label="Remove member"
-					onClick={() => setConfirming(true)}
-				>
-					<UserMinus />
-				</Button>
-			)}
+			<ConfirmDialog
+				title={`Remove ${name}?`}
+				description="They lose access to this team's dashboards, and their time no longer counts towards them."
+				action="Remove"
+				onConfirm={remove}
+				trigger={
+					<Button size="icon" variant="ghost" className="text-muted-foreground" aria-label={`Remove ${name}`}>
+						<UserMinus />
+					</Button>
+				}
+			/>
 		</div>
 	);
 }
@@ -313,8 +309,8 @@ export function DashboardDialog({
 		try {
 			const body = { name: draft.name, member_ids: draft.memberIds, projects: draft.projects };
 			const json = dashboard
-				? await send(`${base(orgId)}/dashboards/${dashboard.id}`, 'PATCH', body)
-				: await send(`${base(orgId)}/dashboards`, 'POST', body);
+				? await sendJson(`${base(orgId)}/dashboards/${dashboard.id}`, 'PATCH', body)
+				: await sendJson(`${base(orgId)}/dashboards`, 'POST', body);
 			setOpen(false);
 			if (dashboard) router.refresh();
 			else router.push(`/orgs/${orgId}/dashboards/${json.data.id}`);
@@ -324,20 +320,16 @@ export function DashboardDialog({
 	}
 
 	async function remove() {
-		try {
-			await send(`${base(orgId)}/dashboards/${dashboard!.id}`, 'DELETE');
-			setOpen(false);
-			router.push(`/orgs/${orgId}`);
-			router.refresh();
-		} catch (error) {
-			toast.error((error as Error).message);
-		}
+		await sendJson(`${base(orgId)}/dashboards/${dashboard!.id}`, 'DELETE');
+		setOpen(false);
+		router.push(`/orgs/${orgId}`);
+		router.refresh();
 	}
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>{trigger}</DialogTrigger>
-			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+			<DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md" aria-describedby={undefined}>
 				<DialogHeader>
 					<DialogTitle>{dashboard ? 'Edit dashboard' : 'New dashboard'}</DialogTitle>
 				</DialogHeader>
@@ -350,7 +342,10 @@ export function DashboardDialog({
 							maxLength={80}
 						/>
 					</Field>
-					<Field label={`Members · ${draft.memberIds.length ? `${draft.memberIds.length} selected` : 'everyone'}`}>
+					<Field
+						group
+						label={`Members · ${draft.memberIds.length ? `${draft.memberIds.length} selected` : 'everyone'}`}
+					>
 						<Chips
 							options={members.map((member) => ({ value: member.id, label: member.label }))}
 							selected={draft.memberIds}
@@ -358,7 +353,10 @@ export function DashboardDialog({
 							empty="No members yet."
 						/>
 					</Field>
-					<Field label={`Projects · ${draft.projects.length ? `${draft.projects.length} selected` : 'all projects'}`}>
+					<Field
+						group
+						label={`Projects · ${draft.projects.length ? `${draft.projects.length} selected` : 'all projects'}`}
+					>
 						<Chips
 							options={[...new Set([...draft.projects, ...projects])].map((name) => ({ value: name, label: name }))}
 							selected={draft.projects}
@@ -382,14 +380,22 @@ export function DashboardDialog({
 							</Button>
 						</div>
 					</Field>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-[13px] text-muted-foreground">
 						Leave members or projects empty to include everyone or every project.
 					</p>
 					<DialogFooter className="sm:justify-between">
 						{dashboard ? (
-							<Button type="button" variant="ghost" onClick={remove}>
-								<Trash2 /> Delete
-							</Button>
+							<ConfirmDialog
+								title="Delete this dashboard?"
+								description="It goes away for everyone on the team. Their coding time isn't affected."
+								action="Delete dashboard"
+								onConfirm={remove}
+								trigger={
+									<Button type="button" variant="ghost" className="text-destructive hover:text-destructive">
+										<Trash2 /> Delete
+									</Button>
+								}
+							/>
 						) : (
 							<span />
 						)}

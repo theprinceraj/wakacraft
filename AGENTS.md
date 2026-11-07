@@ -68,6 +68,9 @@ src/
    ingestion deletes rollups for the affected dates. Don't compute durations anywhere else.
 6. **Dates are local calendar strings** (`YYYY-MM-DD` in the user's timezone); convert with `util/Time.ts`
    (`localDayBounds`, `localDateOf`). Never use `new Date().toISOString().slice(0, 10)` for a user's "today".
+7. **UI tokens live in `globals.css`.** Light cream is the default theme; dark is opt-in. Build pages from `Panel`, `StatTile`, `PageHeader`, `Segmented`
+   and `Chip`, use `--ember` for large marks and `--ember-text`/`--primary` for small text and buttons, and keep charts on the validated `--chart-*` hues.
+   Anything hard to undo goes through `ConfirmDialog`.
 
 ## Commands
 

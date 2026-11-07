@@ -1,27 +1,18 @@
 'use client';
 
 import { Check, Copy } from 'lucide-react';
-import { useState } from 'react';
 
+import { useCopy } from '@/components/app/use-copy';
 import { Button } from '@/components/ui/button';
 
 function Snippet({ label, preview, markdown }: { label: string; preview: string; markdown: string }) {
-	const [copied, setCopied] = useState(false);
+	const { copied, copy } = useCopy();
 	return (
-		<div className="flex flex-col gap-2 rounded-md border p-3">
+		<div className="flex min-w-0 flex-col gap-3 rounded-2xl bg-background p-4">
 			<div className="flex items-center justify-between gap-2">
-				<span className="text-xs font-medium">{label}</span>
-				<Button
-					size="sm"
-					variant="ghost"
-					className="h-7"
-					onClick={async () => {
-						await navigator.clipboard.writeText(markdown);
-						setCopied(true);
-						setTimeout(() => setCopied(false), 1500);
-					}}
-				>
-					{copied ? <Check className="text-success" /> : <Copy />} Markdown
+				<span className="min-w-0 truncate text-[13px] font-medium">{label}</span>
+				<Button size="sm" variant="ghost" onClick={() => copy(markdown)}>
+					{copied ? <Check /> : <Copy />} Markdown
 				</Button>
 			</div>
 			{/* eslint-disable-next-line @next/next/no-img-element -- live preview of the exact embed URL */}
@@ -64,9 +55,9 @@ export function ShareSnippets({
 
 	return (
 		<div className="flex flex-col gap-3">
-			<p className="text-xs text-muted-foreground">
+			<p className="text-[13px] text-muted-foreground">
 				Images update about every 10 minutes and respect your privacy settings. Add{' '}
-				<code className="tabular">?theme=light</code> for light backgrounds.
+				<code className="font-mono text-xs">?theme=light</code> for light backgrounds.
 			</p>
 			<div className="grid gap-3 md:grid-cols-2">
 				{charts.map((name) => (
@@ -79,7 +70,7 @@ export function ShareSnippets({
 				))}
 			</div>
 			{hidden.length ? (
-				<p className="text-xs text-muted-foreground">
+				<p className="text-[13px] text-muted-foreground">
 					Make your {hidden.join(' and ')} public under Public profile to embed{' '}
 					{hidden.length > 1 ? 'their cards' : 'its card'}.
 				</p>
@@ -99,7 +90,9 @@ export function ShareSnippets({
 					})}
 				</div>
 			) : (
-				<p className="text-xs text-muted-foreground">Mark a project public on its page to get a README badge for it.</p>
+				<p className="text-[13px] text-muted-foreground">
+					Mark a project public on its page to get a README badge for it.
+				</p>
 			)}
 		</div>
 	);
