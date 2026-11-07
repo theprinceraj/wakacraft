@@ -26,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
 			className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
 		>
 			<head>
-				{/* Dark-first: dark is the default; light and "follow the system" are opt-in from the account menu. */}
+				{/* Light is the default; dark and "follow the system" are opt-in from the account menu. */}
 				<script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
 			</head>
 			<body className="flex min-h-full flex-col">

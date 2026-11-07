@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
 
 import { EditorSetup } from '@/components/app/editor-setup';
+import { PageHeader } from '@/components/app/page-header';
+import { PageSkeleton } from '@/components/app/states';
 import { Panel } from '@/components/dashboard/panel';
 import { ApiKeys } from '@/components/settings/api-keys';
 import { CustomRulesEditor } from '@/components/settings/custom-rules-editor';
@@ -25,9 +27,12 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Settings' };
 
+/** Clears the sticky app bar, plus the chip row below the desktop breakpoint. */
+const SECTION = 'scroll-mt-32 lg:scroll-mt-22';
+
 export default function SettingsPage() {
 	return (
-		<Suspense fallback={<div className="mx-auto h-96 max-w-5xl animate-pulse rounded-lg border bg-card/50" />}>
+		<Suspense fallback={<PageSkeleton stats={false} />}>
 			<Settings />
 		</Suspense>
 	);
@@ -50,42 +55,52 @@ async function Settings() {
 
 	const showEmbed = Boolean(user.username && user.logged_time_public);
 	const sections: SettingsSection[] = [
-		{ id: 'editor', label: 'Connect an editor' },
-		{ id: 'api-keys', label: 'API keys' },
-		{ id: 'preferences', label: 'Preferences' },
-		{ id: 'public-profile', label: 'Public profile' },
-		...(showEmbed ? [{ id: 'embed', label: 'Embed in your README' }] : []),
-		{ id: 'custom-rules', label: 'Custom rules' },
-		{ id: 'import-export', label: 'Import & export' },
-		{ id: 'authorized-apps', label: 'Authorized apps' },
-		{ id: 'developer-apps', label: 'Developer apps' },
+		{ id: 'editor', label: 'Connect an editor', group: 'Set up' },
+		{ id: 'api-keys', label: 'API keys', group: 'Set up' },
+		{ id: 'preferences', label: 'Preferences', group: 'Account' },
+		{ id: 'public-profile', label: 'Public profile', group: 'Account' },
+		...(showEmbed ? [{ id: 'embed', label: 'README embeds', group: 'Account' }] : []),
+		{ id: 'custom-rules', label: 'Custom rules', group: 'Data' },
+		{ id: 'import-export', label: 'Import and export', group: 'Data' },
+		{ id: 'authorized-apps', label: 'Authorized apps', group: 'Apps' },
+		{ id: 'developer-apps', label: 'Developer apps', group: 'Apps' },
 	];
 
 	return (
-		<div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[11rem_minmax(0,1fr)]">
-			<aside className="hidden lg:block">
-				<div className="sticky top-20 pt-11">
-					<SettingsNav sections={sections} />
-				</div>
-			</aside>
+		<div className="mx-auto max-w-5xl">
+			<PageHeader
+				title="Settings"
+				description="Connect your editors, control what's public, and keep your data."
+				className="mb-4"
+			/>
+			<div className="flex flex-col gap-4 lg:grid lg:grid-cols-[12.5rem_minmax(0,1fr)] lg:gap-10">
+				<SettingsNav sections={sections} />
 
-			<div className="flex min-w-0 flex-col gap-4">
-				<h1 className="text-lg font-semibold tracking-tight">Settings</h1>
-
-				<div id="editor" className="scroll-mt-16">
-					<Panel label="Connect an editor">
+				<div className="flex min-w-0 flex-col gap-4">
+					<Panel
+						id="editor"
+						className={SECTION}
+						label="Connect an editor"
+						description="Once per machine. Heartbeats arrive within about two minutes."
+					>
 						<EditorSetup apiUrl={`${baseUrl}/api/v1`} />
 					</Panel>
-				</div>
 
-				<div id="api-keys" className="scroll-mt-16">
-					<Panel label="API keys">
+					<Panel
+						id="api-keys"
+						className={SECTION}
+						label="API keys"
+						description="Create one for each machine you code on, so that you can revoke them separately."
+					>
 						<ApiKeys initialKeys={keys.map(toApiKeyResponse)} />
 					</Panel>
-				</div>
 
-				<div id="preferences" className="scroll-mt-16">
-					<Panel label="Preferences">
+					<Panel
+						id="preferences"
+						className={SECTION}
+						label="Preferences"
+						description="How your time is counted and shown."
+					>
 						<PreferencesForm
 							initial={{
 								username: user.username,
@@ -96,17 +111,18 @@ async function Settings() {
 							timezones={timezones}
 						/>
 					</Panel>
-				</div>
 
-				<div id="public-profile" className="scroll-mt-16">
-					<Panel label="Public profile">
+					<Panel
+						id="public-profile"
+						className={SECTION}
+						label="Public profile"
+						description="Private by default. Share only what you turn on here."
+					>
 						<PublicProfileForm user={user} baseUrl={baseUrl} />
 					</Panel>
-				</div>
 
-				{user.username && showEmbed ? (
-					<div id="embed" className="scroll-mt-16">
-						<Panel label="Embed in your README">
+					{user.username && showEmbed ? (
+						<Panel id="embed" className={SECTION} label="Embed in your README">
 							<ShareSnippets
 								baseUrl={baseUrl}
 								username={user.username}
@@ -115,45 +131,48 @@ async function Settings() {
 								publicProjects={projects.filter((project) => project.hasPublicUrl).map((project) => project.name)}
 							/>
 						</Panel>
-					</div>
-				) : null}
+					) : null}
 
-				<div id="custom-rules" className="scroll-mt-16">
-					<Panel label="Custom rules">
+					<Panel id="custom-rules" className={SECTION} label="Custom rules">
 						<CustomRulesEditor initialRules={rules.data} />
 					</Panel>
-				</div>
 
-				<div id="import-export" className="scroll-mt-16">
-					<Panel label="Import & export" bodyClassName="flex flex-col gap-6">
-						<ImportExport />
+					<Panel
+						id="import-export"
+						className={SECTION}
+						label="Import and export"
+						description="Your history is yours. Re-importing the same data never duplicates it."
+						bodyClassName="flex flex-col gap-3"
+					>
 						<WakatimeImport initial={wakatimeImport.data} />
+						<ImportExport />
 					</Panel>
-				</div>
 
-				<div id="authorized-apps" className="scroll-mt-16">
-					<Panel label="Authorized apps">
+					<Panel
+						id="authorized-apps"
+						className={SECTION}
+						label="Authorized apps"
+						description="Third-party apps you've allowed to read your data."
+					>
 						<AuthorizedApps initial={authorizations.data} />
 					</Panel>
-				</div>
 
-				<div id="developer-apps" className="scroll-mt-16">
-					<Panel label="Developer apps (OAuth)">
+					<Panel id="developer-apps" className={SECTION} label="Developer apps">
 						<DeveloperApps initial={apps.data} baseUrl={baseUrl} />
 					</Panel>
-				</div>
 
-				<p className="pt-2 text-center text-[11px] text-muted-foreground/70">
-					Section navigation by{' '}
-					<a
-						href="https://rareui.com"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="underline underline-offset-2 hover:text-foreground"
-					>
-						Rare UI
-					</a>
-				</p>
+					<p className="pt-2 text-center text-xs text-muted-foreground">
+						Section navigation by{' '}
+						<a
+							href="https://rareui.com"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="underline underline-offset-2 hover:text-foreground"
+						>
+							Rare UI
+						</a>
+					</p>
+				</div>
 			</div>
 		</div>
 	);

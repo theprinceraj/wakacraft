@@ -69,12 +69,12 @@ function Choice<T extends string>({
 }) {
 	return (
 		<Select value={value} onValueChange={(next) => onChange(next as T)}>
-			<SelectTrigger size="sm" className="h-8 w-auto min-w-24 text-xs" aria-label={label}>
+			<SelectTrigger size="sm" className="w-auto min-w-24 text-[13px]" aria-label={label}>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>
 				{options.map((option) => (
-					<SelectItem key={option} value={option} className="text-xs">
+					<SelectItem key={option} value={option} className="text-[13px]">
 						{format(option)}
 					</SelectItem>
 				))}
@@ -149,7 +149,7 @@ export function CustomRulesEditor({ initialRules }: { initialRules: CustomRuleRe
 
 	return (
 		<div className="flex flex-col gap-3">
-			<p className="text-xs text-muted-foreground">
+			<p className="max-w-[64ch] text-[13px] text-muted-foreground">
 				Rename or merge projects, fix languages, or drop activity you never want counted. Rules run top to bottom on new
 				heartbeats, and saving re-applies them to your whole history. “Equals” is exact; the other matches ignore case.
 			</p>
@@ -159,9 +159,9 @@ export function CustomRulesEditor({ initialRules }: { initialRules: CustomRuleRe
 					{rules.map((rule, index) => (
 						<li
 							key={rule.key}
-							className="flex flex-wrap items-center gap-1.5 rounded-md border bg-background/40 p-2 text-xs"
+							className="flex flex-wrap items-center gap-1.5 rounded-2xl bg-background p-3 text-[13px]"
 						>
-							<span className="tabular w-5 text-center text-muted-foreground">{index + 1}</span>
+							<span className="w-5 text-center text-muted-foreground tabular-nums">{index + 1}</span>
 							<span className="text-muted-foreground">If</span>
 							<Choice
 								label="Field to match"
@@ -181,7 +181,7 @@ export function CustomRulesEditor({ initialRules }: { initialRules: CustomRuleRe
 								onChange={(event) => update(rule.key, { sourceValue: event.target.value })}
 								placeholder="value"
 								aria-label="Value to match"
-								className="h-8 w-36 text-xs"
+								className="h-9 w-36 flex-1 basis-28 md:text-[13px]"
 							/>
 							<span className="text-muted-foreground">then</span>
 							<Choice
@@ -206,15 +206,14 @@ export function CustomRulesEditor({ initialRules }: { initialRules: CustomRuleRe
 										onChange={(event) => update(rule.key, { destinationValue: event.target.value })}
 										placeholder="new value"
 										aria-label="New value"
-										className="h-8 w-36 text-xs"
+										className="h-9 w-36 flex-1 basis-28 md:text-[13px]"
 									/>
 								</>
 							) : null}
 							<span className="ml-auto flex items-center">
 								<Button
-									size="icon"
+									size="icon-sm"
 									variant="ghost"
-									className="size-7"
 									disabled={index === 0}
 									onClick={() => move(index, -1)}
 									aria-label="Move up"
@@ -222,9 +221,8 @@ export function CustomRulesEditor({ initialRules }: { initialRules: CustomRuleRe
 									<ArrowUp />
 								</Button>
 								<Button
-									size="icon"
+									size="icon-sm"
 									variant="ghost"
-									className="size-7"
 									disabled={index === rules.length - 1}
 									onClick={() => move(index, 1)}
 									aria-label="Move down"
@@ -232,13 +230,13 @@ export function CustomRulesEditor({ initialRules }: { initialRules: CustomRuleRe
 									<ArrowDown />
 								</Button>
 								<Button
-									size="icon"
+									size="icon-sm"
 									variant="ghost"
-									className="size-7"
+									className="text-muted-foreground"
 									onClick={() => setRules((current) => current.filter((item) => item.key !== rule.key))}
 									aria-label="Remove rule"
 								>
-									<Trash2 className="text-muted-foreground" />
+									<Trash2 />
 								</Button>
 							</span>
 							{errors[String(index)] ? (
@@ -248,22 +246,22 @@ export function CustomRulesEditor({ initialRules }: { initialRules: CustomRuleRe
 					))}
 				</ol>
 			) : (
-				<p className="rounded-md border border-dashed px-3 py-4 text-center text-xs text-muted-foreground">
-					No rules yet.
+				<p className="rounded-2xl bg-background px-4 py-6 text-center text-[13px] text-muted-foreground">
+					No rules yet. Add one to rename a project or ignore a folder.
 				</p>
 			)}
 
-			<div className="flex items-center gap-2">
-				<Button size="sm" variant="outline" onClick={() => setRules((current) => [...current, blank()])}>
+			<div className="flex flex-wrap items-center gap-2">
+				<Button variant="outline" onClick={() => setRules((current) => [...current, blank()])}>
 					<Plus /> Add rule
 				</Button>
-				<Button size="sm" onClick={save} disabled={progress !== null}>
-					{progress === null ? 'Save & apply' : `Applying… ${progress}%`}
+				<Button onClick={save} disabled={progress !== null}>
+					{progress === null ? 'Save and apply' : `Applying… ${progress}%`}
 				</Button>
 			</div>
 			{progress !== null ? (
-				<div className="h-1 overflow-hidden rounded-full bg-white/5">
-					<div className="h-full bg-ember transition-[width]" style={{ width: `${progress}%` }} />
+				<div className="h-1.5 overflow-hidden rounded-full bg-track">
+					<div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progress}%` }} />
 				</div>
 			) : null}
 		</div>

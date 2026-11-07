@@ -1,42 +1,58 @@
 import { cn } from '@/lib/utils';
 
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+
+const TONES = { card: '', ink: 'tile-ink' } as const;
 
 /**
- * The building block of the dashboard: a compact instrument panel with an uppercase eyebrow label, optional
- * right-side meta, and dense content. Panels sit on a 12-column grid.
+ * The building block of every signed-in page: the homepage's borderless card with a sentence-case title, an optional
+ * description and right-side meta. `flush` removes the body padding for edge-to-edge lists.
  */
 export function Panel({
 	label,
+	description,
 	meta,
 	children,
 	className,
 	bodyClassName,
-}: {
-	label: string;
+	tone = 'card',
+	flush = false,
+	...props
+}: Omit<ComponentProps<'section'>, 'children'> & {
+	label: ReactNode;
+	description?: ReactNode;
 	meta?: ReactNode;
 	children: ReactNode;
-	className?: string;
 	bodyClassName?: string;
+	tone?: keyof typeof TONES;
+	flush?: boolean;
 }) {
 	return (
 		<section
-			className={cn(
-				'relative flex min-w-0 flex-col rounded-lg border bg-card/80 shadow-[inset_0_1px_0_0_oklch(1_0_0/4%)] backdrop-blur-sm',
-				className,
-			)}
+			className={cn('tile relative flex min-w-0 flex-col', TONES[tone], !flush && 'p-5.5 sm:p-7', className)}
+			{...props}
 		>
-			<header className="flex h-9 items-center justify-between gap-3 border-b px-3.5">
-				<h2 className="text-[10.5px] font-medium tracking-[0.14em] text-muted-foreground uppercase">{label}</h2>
-				{meta ? <div className="tabular text-[11px] text-muted-foreground">{meta}</div> : null}
+			<header
+				className={cn(
+					'flex min-w-0 items-start justify-between gap-3',
+					flush ? 'px-5.5 pt-5.5 pb-3.5 sm:px-7 sm:pt-7' : 'mb-5',
+				)}
+			>
+				<div className="min-w-0">
+					<h2 className="text-lg leading-snug font-semibold tracking-[-0.025em]">{label}</h2>
+					{description ? <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p> : null}
+				</div>
+				{meta ? (
+					<div className="shrink-0 pt-0.5 text-[13px] whitespace-nowrap text-muted-foreground">{meta}</div>
+				) : null}
 			</header>
-			<div className={cn('flex-1 p-3.5', bodyClassName)}>{children}</div>
+			<div className={cn('min-w-0 flex-1', flush && 'overflow-hidden rounded-b-[28px]', bodyClassName)}>{children}</div>
 		</section>
 	);
 }
 
 export function PanelEmpty({ children = 'No activity in this range' }: { children?: ReactNode }) {
 	return (
-		<div className="flex h-full min-h-24 items-center justify-center text-xs text-muted-foreground/70">{children}</div>
+		<div className="flex h-full min-h-24 items-center justify-center text-sm text-muted-foreground">{children}</div>
 	);
 }

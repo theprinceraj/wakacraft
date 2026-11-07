@@ -9,9 +9,9 @@ export type Theme = 'dark' | 'light' | 'system';
 const readTheme = (): Theme => {
 	try {
 		const stored = localStorage.getItem(STORAGE_KEY);
-		return stored === 'light' || stored === 'system' ? stored : 'dark';
+		return stored === 'dark' || stored === 'system' ? stored : 'light';
 	} catch {
-		return 'dark';
+		return 'light';
 	}
 };
 
@@ -53,14 +53,14 @@ function subscribe(listener: () => void) {
 
 /** The chosen theme and what it resolves to right now; `setTheme` persists the choice in this browser. */
 export function useTheme() {
-	const theme = useSyncExternalStore(subscribe, readTheme, () => 'dark' as Theme);
+	const theme = useSyncExternalStore(subscribe, readTheme, () => 'light' as Theme);
 	const resolvedTheme = useSyncExternalStore(
 		subscribe,
 		() => resolve(readTheme()),
-		() => 'dark' as const,
+		() => 'light' as const,
 	);
 	const setTheme = useCallback((next: string) => {
-		const value: Theme = next === 'light' || next === 'system' ? next : 'dark';
+		const value: Theme = next === 'dark' || next === 'system' ? next : 'light';
 		try {
 			localStorage.setItem(STORAGE_KEY, value);
 		} catch {

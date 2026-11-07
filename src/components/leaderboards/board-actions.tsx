@@ -5,9 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { ConfirmDialog } from '@/components/app/confirm-dialog';
+import { useCopy } from '@/components/app/use-copy';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { sendJson } from '@/lib/http/send-json';
 
 export function CreateBoardButton() {
 	const router = useRouter();
@@ -16,46 +19,42 @@ export function CreateBoardButton() {
 
 	async function create(event: React.FormEvent) {
 		event.preventDefault();
-		const response = await fetch('/api/v1/users/current/leaderboards', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ name }),
-		});
-		const json = await response.json();
-		if (!response.ok) {
-			toast.error(json.error ?? 'Could not create the leaderboard');
-			return;
+		try {
+			const json = await sendJson('/api/v1/users/current/leaderboards', 'POST', { name });
+			setOpen(false);
+			setName('');
+			router.push(`/leaderboards/${json.data.id}`);
+		} catch (error) {
+			toast.error((error as Error).message);
 		}
-		setOpen(false);
-		setName('');
-		router.push(`/leaderboards/${json.data.id}`);
 	}
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button size="sm">
-					<Plus /> New leaderboard
+				<Button size="sm" variant="outline">
+					<Plus /> New board
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-sm">
+			<DialogContent aria-describedby={undefined}>
 				<DialogHeader>
-					<DialogTitle>New private leaderboard</DialogTitle>
+					<DialogTitle>New private board</DialogTitle>
 				</DialogHeader>
 				<form onSubmit={create} className="flex flex-col gap-4">
 					<Input
 						value={name}
 						onChange={(event) => setName(event.target.value)}
 						placeholder="Team name"
+						aria-label="Board name"
 						maxLength={80}
 						autoFocus
 					/>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-[13px] text-muted-foreground">
 						You&apos;ll get an invite link to share. Members see each other&apos;s last 7 days.
 					</p>
 					<DialogFooter>
 						<Button type="submit" disabled={!name.trim()}>
-							Create
+							Create board
 						</Button>
 					</DialogFooter>
 				</form>
@@ -64,21 +63,14 @@ export function CreateBoardButton() {
 	);
 }
 
+/** The invite link in a pill, readable and one click to copy. Sits on any card, including the navy one. */
 export function InviteLink({ url }: { url: string }) {
-	const [copied, setCopied] = useState(false);
+	const { copied, copy } = useCopy();
 	return (
-		<div className="flex items-center gap-2">
-			<code className="tabular flex-1 truncate rounded-md border bg-background/60 px-2.5 py-1.5 text-xs">{url}</code>
-			<Button
-				size="sm"
-				variant="outline"
-				onClick={async () => {
-					await navigator.clipboard.writeText(url);
-					setCopied(true);
-					setTimeout(() => setCopied(false), 1500);
-				}}
-			>
-				{copied ? <Check className="text-success" /> : <Copy />} Copy invite
+		<div className="flex min-w-0 items-center gap-2 rounded-full bg-background py-1.5 pr-1.5 pl-4 text-foreground">
+			<code className="min-w-0 flex-1 truncate font-mono text-[12.5px]">{url.replace(/^https?:\/\//, '')}</code>
+			<Button size="sm" aria-label="Copy invite link" onClick={() => copy(url)}>
+				{copied ? <Check /> : <Copy />} {copied ? 'Copied' : 'Copy'}
 			</Button>
 		</div>
 	);
@@ -86,33 +78,30 @@ export function InviteLink({ url }: { url: string }) {
 
 export function LeaveBoardButton({ boardId, isOwner }: { boardId: string; isOwner: boolean }) {
 	const router = useRouter();
-	const [confirming, setConfirming] = useState(false);
 
 	async function leave() {
-		const response = await fetch(`/api/v1/users/current/leaderboards/${boardId}`, { method: 'DELETE' });
-		if (!response.ok) {
-			toast.error('Something went wrong');
-			return;
-		}
+		await sendJson(`/api/v1/users/current/leaderboards/${boardId}`, 'DELETE');
 		toast.success(isOwner ? 'Leaderboard deleted' : 'You left the leaderboard');
 		router.push('/leaderboards');
 		router.refresh();
 	}
 
-	return confirming ? (
-		<span className="flex items-center gap-2 text-xs">
-			{isOwner ? 'Delete for everyone?' : 'Leave this leaderboard?'}
-			<Button size="sm" variant="destructive" onClick={leave}>
-				{isOwner ? 'Delete' : 'Leave'}
-			</Button>
-			<Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
-				Cancel
-			</Button>
-		</span>
-	) : (
-		<Button size="sm" variant="ghost" onClick={() => setConfirming(true)}>
-			{isOwner ? <Trash2 /> : <LogOut />} {isOwner ? 'Delete' : 'Leave'}
-		</Button>
+	return (
+		<ConfirmDialog
+			title={isOwner ? 'Delete this board?' : 'Leave this board?'}
+			description={
+				isOwner
+					? 'It goes away for every member. This cannot be undone.'
+					: "Your time stops showing here. You'll need a new invite to come back."
+			}
+			action={isOwner ? 'Delete board' : 'Leave board'}
+			onConfirm={leave}
+			trigger={
+				<Button variant="ghost" className="text-destructive hover:text-destructive">
+					{isOwner ? <Trash2 /> : <LogOut />} {isOwner ? 'Delete board' : 'Leave board'}
+				</Button>
+			}
+		/>
 	);
 }
 
@@ -122,23 +111,18 @@ export function JoinBoardButton({ code }: { code: string }) {
 
 	async function join() {
 		setPending(true);
-		const response = await fetch('/api/v1/users/current/leaderboards/join', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ code }),
-		});
-		setPending(false);
-		const json = await response.json();
-		if (!response.ok) {
-			toast.error(json.error ?? 'Could not join');
-			return;
+		try {
+			const json = await sendJson('/api/v1/users/current/leaderboards/join', 'POST', { code });
+			router.push(`/leaderboards/${json.data.id}`);
+		} catch (error) {
+			toast.error((error as Error).message);
+			setPending(false);
 		}
-		router.push(`/leaderboards/${json.data.id}`);
 	}
 
 	return (
-		<Button onClick={join} disabled={pending}>
-			{pending ? 'Joining…' : 'Join leaderboard'}
+		<Button size="lg" onClick={join} disabled={pending}>
+			{pending ? 'Joining…' : 'Join the board'}
 		</Button>
 	);
 }

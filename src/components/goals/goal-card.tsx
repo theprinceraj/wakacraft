@@ -1,9 +1,12 @@
 'use client';
 
-import { Flame, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { CircleCheck, CircleX, Clock, Flame, MoreHorizontal, Pause, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { Tag } from '@/components/app/chip';
+import { ConfirmDialog } from '@/components/app/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import {
 	DropdownMenu,
@@ -12,69 +15,66 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { formatDuration } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { sendJson } from '@/lib/http/send-json';
 
 import { GoalChart } from './goal-chart';
 import { GoalDialog, type GoalFacets } from './goal-dialog';
 
 import type { GoalResponse } from '@/server/goal/goal.response.dto';
 
-const STATUS_LABEL: Record<GoalResponse['status'], { text: string; className: string }> = {
-	success: { text: 'On track', className: 'bg-success/15 text-success' },
-	fail: { text: 'Missed', className: 'bg-destructive/15 text-destructive' },
-	pending: { text: 'In progress', className: 'bg-ember/15 text-ember' },
-	ignored: { text: 'Paused', className: 'bg-muted text-muted-foreground' },
-};
+const STATUS = {
+	success: { text: 'On track', tone: 'good', icon: CircleCheck },
+	fail: { text: 'Missed', tone: 'bad', icon: CircleX },
+	pending: { text: 'In progress', tone: 'ember', icon: Clock },
+	ignored: { text: 'Paused', tone: 'neutral', icon: Pause },
+} as const satisfies Record<GoalResponse['status'], object>;
 
 export function GoalCard({ goal, facets }: { goal: GoalResponse; facets: GoalFacets }) {
 	const router = useRouter();
+	const [editing, setEditing] = useState(false);
+	const [deleting, setDeleting] = useState(false);
 	const current = goal.chart_data.at(-1)!;
 	const progress = Math.min(100, (current.actual_seconds / goal.seconds) * 100);
-	const status = STATUS_LABEL[goal.status];
+	const status = STATUS[goal.status];
+	const StatusIcon = status.icon;
+	const over = goal.is_inverse && current.actual_seconds > goal.seconds;
 
 	async function remove() {
-		const response = await fetch(`/api/v1/users/current/goals/${goal.id}`, { method: 'DELETE' });
-		if (!response.ok) {
-			toast.error('Could not delete the goal');
-			return;
-		}
+		await sendJson(`/api/v1/users/current/goals/${goal.id}`, 'DELETE');
 		toast.success('Goal deleted');
 		router.refresh();
 	}
 
 	return (
-		<article className="flex flex-col gap-4 rounded-lg border bg-card/80 p-4">
+		<article className="tile flex min-w-0 flex-col gap-4.5 p-5.5 sm:p-7">
 			<header className="flex items-start justify-between gap-3">
 				<div className="min-w-0">
-					<h2 className="text-sm leading-snug font-medium">{goal.title}</h2>
-					<div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
-						<span className={cn('rounded-full px-2 py-0.5', status.className)}>{status.text}</span>
+					<h2 className="text-lg leading-snug font-semibold tracking-[-0.025em]">{goal.title}</h2>
+					<div className="mt-2 flex flex-wrap items-center gap-2">
+						<Tag tone={status.tone}>
+							<StatusIcon aria-hidden /> {status.text}
+						</Tag>
 						{goal.streak ? (
-							<span className="tabular inline-flex items-center gap-1 text-muted-foreground">
-								<Flame className="size-3 text-ember" aria-hidden />
+							<span className="inline-flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
+								<Flame className="size-3.5" aria-hidden />
 								{goal.streak} {goal.delta === 'day' ? 'day' : 'week'}
 								{goal.streak === 1 ? '' : 's'}
 							</span>
 						) : null}
 					</div>
 				</div>
-				<DropdownMenu>
+				{/* Non-modal, so that the dialogs it opens can take focus and clean up after themselves. */}
+				<DropdownMenu modal={false}>
 					<DropdownMenuTrigger asChild>
-						<Button size="icon" variant="ghost" className="size-7 shrink-0" aria-label="Goal actions">
+						<Button size="icon" variant="ghost" className="-mt-1 -mr-1 text-muted-foreground" aria-label="Goal actions">
 							<MoreHorizontal />
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<GoalDialog
-							goal={goal}
-							facets={facets}
-							trigger={
-								<DropdownMenuItem onSelect={(event) => event.preventDefault()}>
-									<Pencil /> Edit
-								</DropdownMenuItem>
-							}
-						/>
-						<DropdownMenuItem variant="destructive" onSelect={remove}>
+					<DropdownMenuContent align="end" className="rounded-2xl p-1.5">
+						<DropdownMenuItem onSelect={() => setEditing(true)}>
+							<Pencil /> Edit
+						</DropdownMenuItem>
+						<DropdownMenuItem variant="destructive" onSelect={() => setDeleting(true)}>
 							<Trash2 /> Delete
 						</DropdownMenuItem>
 					</DropdownMenuContent>
@@ -82,29 +82,37 @@ export function GoalCard({ goal, facets }: { goal: GoalResponse; facets: GoalFac
 			</header>
 
 			<div>
-				<div className="mb-1.5 flex items-baseline justify-between text-xs">
+				<div className="flex items-baseline justify-between text-[13px]">
 					<span className="text-muted-foreground">{goal.delta === 'day' ? 'Today' : 'This week'}</span>
-					<span className="tabular">
-						<span className="text-foreground">{formatDuration(current.actual_seconds)}</span>
+					<span className="tabular-nums">
+						<span className="font-semibold">{formatDuration(current.actual_seconds)}</span>
 						<span className="text-muted-foreground"> / {formatDuration(goal.seconds)}</span>
 					</span>
 				</div>
-				<div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+				<div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-track">
 					<div
-						className="h-full rounded-full"
-						style={{
-							width: `${progress}%`,
-							background:
-								goal.is_inverse && current.actual_seconds > goal.seconds ? 'var(--destructive)' : 'var(--ember)',
-						}}
+						className="h-full rounded-full transition-[width]"
+						style={{ width: `${progress}%`, background: over ? 'var(--destructive)' : 'var(--primary)' }}
 					/>
 				</div>
 			</div>
 
-			<GoalChart goal={goal} />
-			<p className="text-[11px] text-muted-foreground">
-				Last {goal.chart_data.length} {goal.delta === 'day' ? 'days' : 'weeks'}
-			</p>
+			<div className="mt-auto">
+				<GoalChart goal={goal} />
+				<p className="mt-2 text-xs text-muted-foreground">
+					Last {goal.chart_data.length} {goal.delta === 'day' ? 'days' : 'weeks'} · line marks the target
+				</p>
+			</div>
+
+			<GoalDialog goal={goal} facets={facets} open={editing} onOpenChange={setEditing} />
+			<ConfirmDialog
+				open={deleting}
+				onOpenChange={setDeleting}
+				title="Delete this goal?"
+				description={`"${goal.title}" and its streak will be gone for good.`}
+				action="Delete goal"
+				onConfirm={remove}
+			/>
 		</article>
 	);
 }

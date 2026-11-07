@@ -6,11 +6,11 @@ import { requireSession } from '@/lib/auth/session';
 /** The frame prerenders; the session-dependent nav streams in behind its own boundary. */
 export default function AppLayout({ children }: LayoutProps<'/'>) {
 	return (
-		<div className="canvas-grid flex min-h-full flex-1 flex-col">
+		<div className="flex min-h-full flex-1 flex-col">
 			<Suspense fallback={<AppNavSkeleton />}>
 				<SignedInNav />
 			</Suspense>
-			<main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5">{children}</main>
+			<main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-6 pb-24 sm:px-6 sm:pt-9 print:p-0">{children}</main>
 		</div>
 	);
 }

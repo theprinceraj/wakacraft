@@ -104,11 +104,11 @@ describe('commits', () => {
 	});
 
 	it('explains what to do without a GitHub repository', async () => {
-		await heartbeatService.ingest(
-			userId,
-			[{ entity: '/notes.md', type: 'file', project: 'no-repo', time: at(14) }],
-			{ userAgent: null, machineName: null, historical: true },
-		);
+		await heartbeatService.ingest(userId, [{ entity: '/notes.md', type: 'file', project: 'no-repo', time: at(14) }], {
+			userAgent: null,
+			machineName: null,
+			historical: true,
+		});
 		const { status, json } = await call(getCommits, {
 			path: '/api/v1/users/current/projects/no-repo/commits',
 			params: { id: 'no-repo' },

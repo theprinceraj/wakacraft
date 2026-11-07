@@ -1,20 +1,26 @@
+import { ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
 
+import { chipClass } from '@/components/app/chip';
+import { PageHeader } from '@/components/app/page-header';
+import { EmptyState, PageSkeleton } from '@/components/app/states';
 import { seriesColor } from '@/components/dashboard/colors';
+import { ColumnBars } from '@/components/dashboard/column-bars';
+import { Panel } from '@/components/dashboard/panel';
+import { StatTile } from '@/components/dashboard/stat-tile';
+import { Button } from '@/components/ui/button';
 import { requireSession } from '@/lib/auth/session';
 import { formatDay, formatDuration } from '@/lib/format';
-import { cn } from '@/lib/utils';
 import { wrappedService } from '@/server/wrapped/wrapped.service';
 
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 
 export const metadata: Metadata = { title: 'Wrapped' };
 
 export default function WrappedPage({ searchParams }: PageProps<'/wrapped'>) {
 	return (
-		<Suspense fallback={<div className="h-[600px] animate-pulse rounded-lg border bg-card/50" />}>
+		<Suspense fallback={<PageSkeleton />}>
 			<Wrapped searchParams={searchParams} />
 		</Suspense>
 	);
@@ -22,24 +28,23 @@ export default function WrappedPage({ searchParams }: PageProps<'/wrapped'>) {
 
 const hours = (seconds: number) => Math.round(seconds / 3600).toLocaleString();
 
-function Card({ eyebrow, children, className }: { eyebrow: string; children: ReactNode; className?: string }) {
+function Ranked({
+	items,
+	colored = true,
+}: {
+	items: { name: string; seconds: number; percent: number }[];
+	colored?: boolean;
+}) {
 	return (
-		<section className={cn('flex flex-col gap-3 rounded-xl border bg-card/80 p-6', className)}>
-			<p className="text-[10.5px] tracking-[0.16em] text-muted-foreground uppercase">{eyebrow}</p>
-			{children}
-		</section>
-	);
-}
-
-function Ranked({ items }: { items: { name: string; seconds: number; percent: number }[] }) {
-	return (
-		<ol className="flex flex-col gap-2.5">
+		<ol className="flex flex-col gap-3">
 			{items.map((item, index) => (
 				<li key={item.name} className="flex items-center gap-3">
-					<span className="tabular w-5 text-lg text-muted-foreground">{index + 1}</span>
-					<span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: seriesColor(index) }} />
+					<span className="w-4.5 text-lg font-medium text-muted-foreground tabular-nums">{index + 1}</span>
+					{colored ? (
+						<span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: seriesColor(index, item.name) }} />
+					) : null}
 					<span className="min-w-0 flex-1 truncate text-base">{item.name}</span>
-					<span className="tabular text-sm text-muted-foreground">{hours(item.seconds)}h</span>
+					<span className="text-[13px] text-muted-foreground tabular-nums">{hours(item.seconds)}h</span>
 				</li>
 			))}
 		</ol>
@@ -53,134 +58,129 @@ async function Wrapped({ searchParams }: Pick<PageProps<'/wrapped'>, 'searchPara
 	const requested = Number(yearParam);
 	const year = years.includes(requested) ? requested : years[0];
 	const view = await wrappedService.getView(session.user.id, year);
-	const maxMonth = Math.max(1, ...view.months.map((month) => month.seconds));
 	const change =
 		view.previousYearSeconds && view.previousYearSeconds > 0
 			? (view.totalSeconds - view.previousYearSeconds) / view.previousYearSeconds
 			: null;
+	const totalLines = view.aiLineChanges + view.humanLineChanges;
 
 	return (
-		<div className="mx-auto flex max-w-4xl flex-col gap-4">
-			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div>
-					<p className="tabular text-xs tracking-[0.16em] text-ember uppercase">wakacraft wrapped</p>
-					<h1 className="text-4xl font-semibold tracking-tight">Your {year} in code</h1>
-				</div>
-				<nav className="flex gap-1">
-					{years.map((item) => (
-						<Link
-							key={item}
-							href={`/wrapped?year=${item}`}
-							className={cn(
-								'tabular rounded-md border px-2.5 py-1 text-xs text-muted-foreground',
-								item === year && 'border-ember/60 bg-ember/10 text-ember',
-							)}
-						>
-							{item}
-						</Link>
-					))}
-				</nav>
-			</div>
+		<div className="mx-auto max-w-5xl">
+			<PageHeader
+				eyebrow="wakacraft wrapped"
+				title={`Your ${year} in code`}
+				actions={
+					years.length > 1 ? (
+						<nav className="scroll-x-quiet flex max-w-full gap-1.5" aria-label="Year">
+							{years.map((item) => (
+								<Link
+									key={item}
+									href={`/wrapped?year=${item}`}
+									aria-current={item === year ? 'true' : undefined}
+									className={chipClass(item === year)}
+								>
+									{item}
+								</Link>
+							))}
+						</nav>
+					) : undefined
+				}
+			/>
 
 			{view.totalSeconds === 0 ? (
-				<Card eyebrow={String(year)}>
-					<p className="text-sm text-muted-foreground">No coding recorded in {year} yet.</p>
-				</Card>
+				<EmptyState
+					icon={Sparkles}
+					title={`No coding recorded in ${year} yet`}
+					action={
+						<Button asChild size="lg">
+							<Link href="/settings#editor">
+								Connect your editor <ArrowRight />
+							</Link>
+						</Button>
+					}
+				>
+					Your Wrapped builds itself from your activity. Come back once you&apos;ve written some code.
+				</EmptyState>
 			) : (
-				<>
-					<Card
-						eyebrow="Total"
-						className="bg-[radial-gradient(120%_120%_at_0%_0%,color-mix(in_oklab,var(--ember)_16%,transparent),transparent_60%)]"
-					>
-						<p className="tabular text-6xl leading-none font-semibold text-ember sm:text-7xl">
+				<div className="flex flex-col gap-4">
+					<section className="tile tile-ember flex flex-col gap-7 px-5.5 py-8 sm:px-7 sm:py-9">
+						<p className="text-[13px] text-muted-foreground">Total</p>
+						<p className="text-[clamp(4rem,13vw,9.25rem)] leading-[0.95] font-semibold tracking-[-0.05em] text-on-ember-strong">
 							{hours(view.totalSeconds)} hours
 						</p>
-						<p className="text-sm text-muted-foreground">
-							across {view.activeDays} days of {view.daysInRange} · {formatDuration(view.dailyAverageSeconds)} on an
-							average coding day
-							{change !== null ? (
-								<span className={change >= 0 ? 'text-success' : 'text-destructive'}>
-									{' '}
-									· {change >= 0 ? '+' : ''}
-									{Math.round(change * 100)}% vs {year - 1}
-								</span>
-							) : null}
+						<p className="max-w-[58ch] text-base">
+							Across <b className="font-semibold">{view.activeDays} days</b> of {view.daysInRange}, with{' '}
+							<b className="font-semibold">{formatDuration(view.dailyAverageSeconds)}</b> on an average coding day.
+							{change !== null
+								? ` That's ${change >= 0 ? 'up' : 'down'} ${Math.abs(Math.round(change * 100))}% from ${year - 1}.`
+								: ''}
 						</p>
-					</Card>
+					</section>
 
-					<div className="grid gap-4 sm:grid-cols-3">
-						<Card eyebrow="Longest streak">
-							<p className="tabular text-4xl font-semibold">{view.longestStreak} days</p>
-						</Card>
-						<Card eyebrow="Best day">
-							<p className="tabular text-4xl font-semibold">
-								{view.bestDay ? formatDuration(view.bestDay.total_seconds) : '—'}
-							</p>
-							{view.bestDay ? (
-								<p className="text-xs text-muted-foreground">
-									{formatDay(view.bestDay.date, { weekday: 'long', month: 'long', day: 'numeric' })}
-								</p>
-							) : null}
-						</Card>
-						<Card eyebrow="Peak hour">
-							<p className="tabular text-4xl font-semibold">
-								{view.peakHour === null ? '—' : `${String(view.peakHour).padStart(2, '0')}:00`}
-							</p>
-							<p className="text-xs text-muted-foreground">
-								{view.peakWeekday ? `${view.peakWeekday}s were your strongest` : null}
-							</p>
-						</Card>
+					<div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+						<StatTile label="Longest streak" value={`${view.longestStreak} days`} hint="in a row" />
+						<StatTile
+							label="Best day"
+							value={view.bestDay ? formatDuration(view.bestDay.total_seconds) : '—'}
+							hint={
+								view.bestDay
+									? formatDay(view.bestDay.date, { weekday: 'long', month: 'long', day: 'numeric' })
+									: undefined
+							}
+						/>
+						<StatTile
+							label="Peak hour"
+							value={view.peakHour === null ? '—' : `${String(view.peakHour).padStart(2, '0')}:00`}
+							hint={view.peakWeekday ? `${view.peakWeekday}s were your strongest` : undefined}
+							className="max-md:col-span-2"
+						/>
 					</div>
 
-					<Card eyebrow={view.busiestMonth ? `Busiest month · ${view.busiestMonth.name}` : 'Months'}>
-						<div className="grid h-40 grid-cols-12 items-end gap-2">
-							{view.months.map((month) => (
-								<div key={month.name} className="flex h-full flex-col items-center justify-end gap-1.5">
-									<div
-										className={cn(
-											'w-full rounded-t-[3px]',
-											month.name === view.busiestMonth?.name ? 'bg-ember' : 'bg-chart-2/70',
-										)}
-										style={{ height: `${Math.max(month.seconds ? 3 : 1, (month.seconds / maxMonth) * 100)}%` }}
-										title={`${month.name}: ${hours(month.seconds)}h`}
-									/>
-									<span className="text-[10px] text-muted-foreground">{month.name.slice(0, 1)}</span>
-								</div>
-							))}
-						</div>
-					</Card>
+					<Panel label={view.busiestMonth ? `Busiest month: ${view.busiestMonth.name}` : 'Months'} tone="ink">
+						<ColumnBars
+							height={180}
+							maxBarWidth={36}
+							format={(seconds) => `${hours(seconds)}h`}
+							items={view.months.map((month) => ({
+								key: month.name,
+								label: month.name.slice(0, 3),
+								title: month.name,
+								seconds: month.seconds,
+							}))}
+						/>
+					</Panel>
 
 					<div className="grid gap-4 md:grid-cols-2">
-						<Card eyebrow="Top languages">
+						<Panel label="Top languages">
 							<Ranked items={view.languages} />
 							{view.newLanguages.length ? (
-								<p className="text-xs text-muted-foreground">
-									New this year: {view.newLanguages.slice(0, 5).join(', ')}
+								<p className="mt-4 text-[13px] text-muted-foreground">
+									<span className="font-medium text-foreground">New this year:</span>{' '}
+									{view.newLanguages.slice(0, 5).join(', ')}
 								</p>
 							) : null}
-						</Card>
-						<Card eyebrow="Top projects">
+						</Panel>
+						<Panel label="Top projects">
 							<Ranked items={view.projects} />
-						</Card>
+						</Panel>
 					</div>
 
 					<div className="grid gap-4 md:grid-cols-2">
-						<Card eyebrow="Editors">
-							<Ranked items={view.editors} />
-						</Card>
-						{view.aiLineChanges + view.humanLineChanges > 0 ? (
-							<Card eyebrow="Lines changed">
-								<p className="tabular text-3xl font-semibold">
-									{(view.aiLineChanges + view.humanLineChanges).toLocaleString()}
+						<Panel label="Editors">
+							<Ranked items={view.editors} colored={false} />
+						</Panel>
+						{totalLines > 0 ? (
+							<Panel label="Lines changed">
+								<p className="text-[clamp(2.5rem,6vw,3.5rem)] leading-none font-semibold tracking-[-0.04em]">
+									{totalLines.toLocaleString()}
 								</p>
-								<p className="text-xs text-muted-foreground">
-									{Math.round((view.aiLineChanges / (view.aiLineChanges + view.humanLineChanges)) * 100)}% with AI
-									assistance
+								<p className="mt-2 text-[13px] text-muted-foreground">
+									{Math.round((view.aiLineChanges / totalLines) * 100)}% with AI assistance
 								</p>
-							</Card>
+							</Panel>
 						) : null}
 					</div>
-				</>
+				</div>
 			)}
 		</div>
 	);

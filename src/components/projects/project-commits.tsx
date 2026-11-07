@@ -57,11 +57,15 @@ export function ProjectCommits({ project }: { project: string }) {
 	}, [project, page]);
 
 	const grantPrivate = () =>
-		authClient.linkSocial({ provider: 'github', scopes: ['repo'], callbackURL: window.location.pathname });
+		authClient.linkSocial({
+			provider: 'github',
+			scopes: ['repo'],
+			callbackURL: `${window.location.pathname}${window.location.search}#commits`,
+		});
 
 	if (state.error) {
 		return (
-			<div className="flex flex-col items-start gap-2 text-xs text-muted-foreground">
+			<div className="flex flex-col items-start gap-3 px-5.5 pb-6 text-sm text-muted-foreground sm:px-7">
 				<p>{state.error}</p>
 				{/private/.test(state.error) ? (
 					<Button size="sm" variant="outline" onClick={grantPrivate}>
@@ -71,32 +75,36 @@ export function ProjectCommits({ project }: { project: string }) {
 			</div>
 		);
 	}
-	if (!state.data) return <div className="h-40 animate-pulse rounded-md bg-muted/40" />;
+	if (!state.data)
+		return <div className="mx-5.5 mb-6 h-40 animate-pulse rounded-2xl bg-accent motion-reduce:animate-none sm:mx-7" />;
 
 	const { commits, next_page, prev_page, can_read_private } = state.data;
 	return (
-		<div className={cn('flex flex-col gap-2 transition-opacity', state.loading && 'opacity-60')}>
+		<div className={cn('flex flex-col transition-opacity', state.loading && 'opacity-60')}>
 			{commits.length ? (
-				<ul className="divide-y">
+				<ul className="divide-y border-y">
 					{commits.map((commit) => (
-						<li key={commit.hash} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2">
+						<li
+							key={commit.hash}
+							className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3.5 px-5.5 py-3.5 sm:px-7"
+						>
 							<div className="min-w-0">
 								<a
 									href={commit.html_url}
 									target="_blank"
 									rel="noreferrer"
-									className="block truncate text-sm hover:text-ember"
+									className="block truncate font-medium transition-colors hover:text-ember-text"
 								>
 									{commit.message.split('\n')[0]}
 								</a>
-								<p className="tabular truncate text-[11px] text-muted-foreground">
+								<p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
 									<GitCommitHorizontal className="mr-1 inline size-3" aria-hidden />
 									{commit.truncated_hash} · {commit.author_username ?? commit.author_name ?? 'unknown'} ·{' '}
 									{localDate.format(new Date(commit.committer_date))}
 								</p>
 							</div>
 							<span
-								className={cn('tabular text-sm', !commit.is_author_found && 'text-muted-foreground/60')}
+								className={cn('tabular-nums', commit.is_author_found ? 'font-medium' : 'text-muted-foreground')}
 								title={commit.is_author_found ? 'Your coding time since the previous commit' : 'Not your commit'}
 							>
 								{commit.is_author_found ? commit.human_readable_total : '—'}
@@ -105,12 +113,16 @@ export function ProjectCommits({ project }: { project: string }) {
 					))}
 				</ul>
 			) : (
-				<p className="py-6 text-center text-xs text-muted-foreground">No commits on this branch.</p>
+				<p className="border-t px-5 py-8 text-center text-sm text-muted-foreground">No commits on this branch.</p>
 			)}
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between gap-3 px-5.5 py-2.5 sm:px-7">
 				{!can_read_private ? (
-					<button type="button" onClick={grantPrivate} className="text-[11px] text-muted-foreground hover:text-ember">
-						Private repo? Grant access
+					<button
+						type="button"
+						onClick={grantPrivate}
+						className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+					>
+						<Lock className="size-3.5" aria-hidden /> Private repo? Grant access
 					</button>
 				) : (
 					<span />
@@ -119,7 +131,6 @@ export function ProjectCommits({ project }: { project: string }) {
 					<Button
 						size="icon"
 						variant="ghost"
-						className="size-7"
 						disabled={!prev_page}
 						aria-label="Newer commits"
 						onClick={() => setPage(prev_page!)}
@@ -129,7 +140,6 @@ export function ProjectCommits({ project }: { project: string }) {
 					<Button
 						size="icon"
 						variant="ghost"
-						className="size-7"
 						disabled={!next_page}
 						aria-label="Older commits"
 						onClick={() => setPage(next_page!)}

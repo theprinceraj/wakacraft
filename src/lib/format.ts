@@ -8,8 +8,39 @@ export function formatDuration(seconds: number): string {
 	return whole > 0 ? `${whole}s` : '0m';
 }
 
-/** Hours with one decimal for axes: `3.5h`. */
-export const formatHours = (seconds: number) => `${(seconds / 3600).toFixed(seconds >= 36_000 ? 0 : 1)}h`;
+export const formatMoney = (amount: number, currency: string) =>
+	new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+
+/** Range names come from the WakaTime-compatible API in title case ("Last 7 Days"); the UI uses sentence case. */
+export const formatRangeLabel = (label: string) => label.charAt(0) + label.slice(1).toLowerCase();
+
+/** Axis tick: `2h`, `30m`, `1.5h`. */
+export function formatAxisDuration(seconds: number) {
+	if (seconds > 0 && seconds < 3600) return `${Math.round(seconds / 60)}m`;
+	return `${+(seconds / 3600).toFixed(1)}h`;
+}
+
+const TICK_STEPS = [900, 1800, 3600, 7200, 10800, 14400, 18000, 36000, 72000, 180000, 360000];
+
+/** Round axis ticks from zero up to at least `maxSeconds`, so that charts never show ticks like 4.4h. */
+export function durationTicks(maxSeconds: number) {
+	const step =
+		TICK_STEPS.find((candidate) => maxSeconds / candidate <= 4) ?? Math.ceil(maxSeconds / 4 / 360000) * 360000;
+	const count = Math.max(1, Math.ceil(maxSeconds / step));
+	return Array.from({ length: count + 1 }, (_, index) => index * step);
+}
+
+/** Category names arrive in lowercase from editors ("ai coding"). */
+export const formatCategory = (name: string) =>
+	name.replace(/^ai\b/i, 'AI').replace(/^./, (first) => first.toUpperCase());
+
+export const initialsOf = (name: string) =>
+	name
+		.split(/\s+/)
+		.map((word) => word[0])
+		.join('')
+		.slice(0, 2)
+		.toUpperCase();
 
 const parseDate = (date: string) => {
 	const [year, month, day] = date.split('-').map(Number);

@@ -65,56 +65,56 @@ export function WakatimeImport({ initial }: { initial: WakatimeImportResponse | 
 	}
 
 	return (
-		<div className="flex flex-col gap-2">
-			<p className="text-sm font-medium">Import directly from wakatime.com</p>
-			<p className="text-xs text-muted-foreground">
+		<div className="flex flex-col gap-1 rounded-2xl bg-background p-4">
+			<p className="font-semibold">Import from wakatime.com</p>
+			<p className="max-w-[64ch] text-[13px] text-muted-foreground">
 				Create a personal OAuth token at{' '}
 				<a
 					href="https://wakatime.com/oauth"
 					target="_blank"
 					rel="noreferrer"
-					className="underline underline-offset-2 hover:text-foreground"
+					className="font-medium text-ember-text underline underline-offset-3"
 				>
 					wakatime.com/oauth
 				</a>{' '}
-				and paste it here — WakaTime no longer accepts your secret API key outside editor plugins. wakacraft fetches
-				your history one day at a time; the token is stored encrypted only while the import runs.
+				and paste it here. WakaTime no longer accepts your secret API key outside editor plugins. wakacraft fetches your
+				history one day at a time, and stores the token encrypted only while the import runs.
 			</p>
 
 			{running && job ? (
-				<div className="flex flex-col gap-1.5">
-					<div className="flex items-center justify-between text-xs">
-						<span className="tabular text-muted-foreground">
-							{job.waiting_until ? 'WakaTime asked us to slow down — resuming shortly · ' : ''}
+				<div className="mt-2 flex flex-col gap-1.5">
+					<div className="flex items-center justify-between gap-3 text-[13px]">
+						<span className="text-muted-foreground tabular-nums">
+							{job.waiting_until ? 'WakaTime asked us to slow down, resuming shortly · ' : ''}
 							{job.days_done.toLocaleString()} / {job.days_total.toLocaleString()} days ·{' '}
 							{job.heartbeats_imported.toLocaleString()} heartbeats
 						</span>
-						<Button size="sm" variant="ghost" className="h-7" onClick={cancel}>
+						<Button size="sm" variant="ghost" onClick={cancel}>
 							<X /> Cancel
 						</Button>
 					</div>
-					<div className="h-1 overflow-hidden rounded-full bg-muted">
-						<div className="h-full bg-ember transition-[width]" style={{ width: `${job.percent}%` }} />
+					<div className="h-1.5 overflow-hidden rounded-full bg-track">
+						<div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${job.percent}%` }} />
 					</div>
 				</div>
 			) : (
-				<form onSubmit={start} className="mt-1 flex flex-col gap-2 sm:flex-row">
+				<form onSubmit={start} className="mt-2.5 flex flex-col gap-2 sm:flex-row">
 					<Input
 						type="password"
 						autoComplete="off"
 						placeholder="Personal OAuth token"
 						value={token}
 						onChange={(event) => setToken(event.target.value)}
-						className="tabular sm:max-w-sm"
+						className="font-mono sm:max-w-sm"
 					/>
-					<Button size="sm" type="submit" disabled={pending || token.trim().length < 20}>
+					<Button size="lg" className="pl-4" type="submit" disabled={pending || token.trim().length < 20}>
 						<CloudDownload /> {pending ? 'Checking token…' : 'Start import'}
 					</Button>
 				</form>
 			)}
 
 			{job && !running ? (
-				<p className="text-xs text-muted-foreground">
+				<p className="mt-2 text-[13px] text-muted-foreground">
 					Last import:{' '}
 					{job.status === 'done'
 						? `finished, ${job.heartbeats_imported.toLocaleString()} heartbeats from ${job.start_date} to ${job.end_date}.`

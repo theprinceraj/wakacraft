@@ -5,35 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
+import { Chip } from '@/components/app/chip';
+import { Field } from '@/components/app/field';
+import { Segmented } from '@/components/app/segmented';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RoundingOptions } from '@/lib/util/Invoices';
-import { cn } from '@/lib/utils';
+import { sendJson } from '@/lib/http/send-json';
+import { InvoiceStatusesList, RoundingOptions } from '@/lib/util/Invoices';
 
 import type { ClientResponse } from '@/server/invoice/invoice.service';
-
-async function send(url: string, method: string, body: unknown) {
-	const response = await fetch(url, {
-		method,
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify(body),
-	});
-	const json = await response.json().catch(() => ({}));
-	if (!response.ok) throw new Error(json.error ?? 'Request failed');
-	return json;
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-	return (
-		<div className="grid gap-1.5">
-			<Label className="text-xs">{label}</Label>
-			{children}
-		</div>
-	);
-}
 
 export function ClientDialog({
 	projects,
@@ -59,7 +41,7 @@ export function ClientDialog({
 	async function save(event: React.FormEvent) {
 		event.preventDefault();
 		try {
-			await send(
+			await sendJson(
 				client ? `/api/v1/users/current/clients/${client.id}` : '/api/v1/users/current/clients',
 				client ? 'PATCH' : 'POST',
 				{
@@ -83,7 +65,7 @@ export function ClientDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>{trigger}</DialogTrigger>
-			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+			<DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md" aria-describedby={undefined}>
 				<DialogHeader>
 					<DialogTitle>{client ? 'Edit client' : 'New client'}</DialogTitle>
 				</DialogHeader>
@@ -144,31 +126,26 @@ export function ClientDialog({
 							rows={2}
 							value={draft.address}
 							onChange={(e) => setDraft({ ...draft, address: e.target.value })}
-							className="rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+							className="rounded-xl border border-input bg-background px-3.5 py-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 						/>
 					</Field>
-					<Field label={`Projects billed to this client · ${draft.projects.length} selected`}>
-						<div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+					<Field group label={`Projects billed to this client · ${draft.projects.length} selected`}>
+						<div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto p-0.5">
 							{[...new Set([...draft.projects, ...projects])].map((project) => {
 								const on = draft.projects.includes(project);
 								return (
-									<button
+									<Chip
 										key={project}
-										type="button"
-										aria-pressed={on}
+										selected={on}
 										onClick={() =>
 											setDraft({
 												...draft,
 												projects: on ? draft.projects.filter((p) => p !== project) : [...draft.projects, project],
 											})
 										}
-										className={cn(
-											'rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground',
-											on && 'border-ember/60 bg-ember/15 text-ember',
-										)}
 									>
 										{project}
-									</button>
+									</Chip>
 								);
 							})}
 						</div>
@@ -205,7 +182,7 @@ export function NewInvoiceDialog({
 		event.preventDefault();
 		setPending(true);
 		try {
-			const json = await send('/api/v1/users/current/invoices', 'POST', {
+			const json = await sendJson('/api/v1/users/current/invoices', 'POST', {
 				...draft,
 				notes: draft.notes.trim() || null,
 			});
@@ -221,11 +198,16 @@ export function NewInvoiceDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button size="sm" disabled={!clients.length}>
+				<Button
+					size="lg"
+					className="pl-4"
+					disabled={!clients.length}
+					title={clients.length ? undefined : 'Add a client first'}
+				>
 					<Plus /> New invoice
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-sm">
+			<DialogContent aria-describedby={undefined}>
 				<DialogHeader>
 					<DialogTitle>New invoice</DialogTitle>
 				</DialogHeader>
@@ -284,7 +266,7 @@ export function InvoiceActions({ id, status }: { id: string; status: string }) {
 	const router = useRouter();
 	const setStatus = async (next: string) => {
 		try {
-			await send(`/api/v1/users/current/invoices/${id}`, 'PATCH', { status: next });
+			await sendJson(`/api/v1/users/current/invoices/${id}`, 'PATCH', { status: next });
 			router.refresh();
 		} catch (error) {
 			toast.error((error as Error).message);
@@ -292,19 +274,16 @@ export function InvoiceActions({ id, status }: { id: string; status: string }) {
 	};
 	return (
 		<div className="flex flex-wrap items-center gap-2 print:hidden">
-			<Select value={status} onValueChange={setStatus}>
-				<SelectTrigger size="sm" className="w-28">
-					<SelectValue />
-				</SelectTrigger>
-				<SelectContent>
-					{['draft', 'sent', 'paid'].map((option) => (
-						<SelectItem key={option} value={option} className="capitalize">
-							{option}
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<Button size="sm" variant="outline" onClick={() => window.print()}>
+			<Segmented
+				aria-label="Invoice status"
+				value={status}
+				onValueChange={setStatus}
+				options={InvoiceStatusesList.map((option) => ({
+					value: option,
+					label: option[0].toUpperCase() + option.slice(1),
+				}))}
+			/>
+			<Button variant="outline" onClick={() => window.print()}>
 				<Printer /> Print / PDF
 			</Button>
 		</div>

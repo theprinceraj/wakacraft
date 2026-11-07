@@ -61,6 +61,8 @@ export interface DashboardView {
 	projectColors: Record<string, string | null>;
 	projects: Breakdown[];
 	languages: Breakdown[];
+	/** Today's languages, whatever the selected range is. */
+	todayLanguages: Breakdown[];
 	editors: Breakdown[];
 	operatingSystems: Breakdown[];
 	categories: Breakdown[];
@@ -183,6 +185,7 @@ class DashboardService {
 			projectColors: Object.fromEntries(projectDocs.map((project) => [project.name, project.color ?? null])),
 			projects: toBreakdown(rangeTotal.projects, rangeTotal.totalSeconds),
 			languages: toBreakdown(rangeTotal.languages, rangeTotal.totalSeconds),
+			todayLanguages: toBreakdown(totals.get(today)?.languages ?? [], totals.get(today)?.totalSeconds ?? 0),
 			editors: toBreakdown(rangeTotal.editors, rangeTotal.totalSeconds),
 			operatingSystems: toBreakdown(rangeTotal.operatingSystems, rangeTotal.totalSeconds),
 			categories: toBreakdown(rangeTotal.categories, rangeTotal.totalSeconds),

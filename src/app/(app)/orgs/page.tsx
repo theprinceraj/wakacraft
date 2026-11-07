@@ -1,9 +1,13 @@
-import { Users } from 'lucide-react';
+import { ArrowUpRight, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
 
+import { Tag } from '@/components/app/chip';
+import { PageHeader } from '@/components/app/page-header';
+import { EmptyState, PageSkeleton } from '@/components/app/states';
 import { CreateOrgButton } from '@/components/orgs/org-actions';
 import { requireSession } from '@/lib/auth/session';
+import { OrgRoles } from '@/lib/util/Orgs';
 import { orgService } from '@/server/org/org.service';
 
 import type { Metadata } from 'next';
@@ -12,7 +16,7 @@ export const metadata: Metadata = { title: 'Teams' };
 
 export default function OrgsPage() {
 	return (
-		<Suspense fallback={<div className="h-96 animate-pulse rounded-lg border bg-card/50" />}>
+		<Suspense fallback={<PageSkeleton stats={false} rows={1} />}>
 			<Orgs />
 		</Suspense>
 	);
@@ -23,45 +27,45 @@ async function Orgs() {
 	const orgs = await orgService.listOrgs(session.user.id);
 
 	return (
-		<div className="mx-auto flex max-w-3xl flex-col gap-3">
-			<div className="flex items-end justify-between">
-				<div>
-					<h1 className="text-lg font-semibold tracking-tight">Teams</h1>
-					<p className="text-xs text-muted-foreground">
-						Organizations share dashboards of their members&apos; coding time.
-					</p>
-				</div>
-				<CreateOrgButton />
-			</div>
+		<>
+			<PageHeader
+				title="Teams"
+				description="Organizations share dashboards of their members' coding time."
+				actions={orgs.data.length ? <CreateOrgButton /> : undefined}
+			/>
 			{orgs.data.length ? (
-				<ul className="grid gap-2 sm:grid-cols-2">
+				<ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					{orgs.data.map((org) => (
 						<li key={org.id}>
 							<Link
 								href={`/orgs/${org.id}`}
-								className="flex items-center gap-3 rounded-lg border bg-card/80 px-3.5 py-3 hover:border-ember/40"
+								className="tile group/card flex h-full min-h-46 flex-col justify-between gap-6 p-6 transition-colors hover:bg-accent"
 							>
-								<Users className="size-4 text-muted-foreground" aria-hidden />
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm">{org.name}</p>
-									<p className="tabular text-[11px] text-muted-foreground">
+								<span className="flex items-start justify-between gap-3">
+									<Tag tone={org.role === OrgRoles.Owner ? 'ember' : 'neutral'} className="capitalize">
+										{org.role}
+									</Tag>
+									<ArrowUpRight
+										className="size-5 text-foreground/70 transition-transform group-hover/card:translate-x-0.5 group-hover/card:-translate-y-0.5"
+										aria-hidden
+									/>
+								</span>
+								<span className="min-w-0">
+									<span className="block truncate text-2xl font-semibold tracking-[-0.03em]">{org.name}</span>
+									<span className="mt-1 block text-[13px] text-muted-foreground tabular-nums">
 										{org.members_count} member{org.members_count === 1 ? '' : 's'} · {org.dashboards_count} dashboard
 										{org.dashboards_count === 1 ? '' : 's'}
-									</p>
-								</div>
-								<span className="rounded-full bg-muted px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
-									{org.role}
+									</span>
 								</span>
 							</Link>
 						</li>
 					))}
 				</ul>
 			) : (
-				<div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-12 text-center text-xs text-muted-foreground">
-					<Users className="size-5 text-ember" aria-hidden />
+				<EmptyState icon={Users} title="Bring your team along" action={<CreateOrgButton />}>
 					Create a team and share its invite link, or open an invite link someone sent you.
-				</div>
+				</EmptyState>
 			)}
-		</div>
+		</>
 	);
 }

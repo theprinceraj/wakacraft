@@ -3,46 +3,42 @@ import { formatDuration } from '@/lib/format';
 
 import type { GoalResponse } from '@/server/goal/goal.response.dto';
 
+/** Met periods are solid, misses quiet, and the current one orange; the tooltip always says which in words. */
 const STATUS_COLOR: Record<GoalResponse['status'], string> = {
-	success: 'var(--success)',
-	fail: 'var(--destructive)',
+	success: 'var(--bar)',
+	fail: 'var(--quiet)',
 	pending: 'var(--ember)',
-	ignored: 'oklch(1 0 0 / 14%)',
+	ignored: 'var(--track)',
 };
 
-/** One bar per period against the target line; bar color is that period's outcome. */
+/** One bar per period against the target line. */
 export function GoalChart({ goal }: { goal: GoalResponse }) {
 	const max = Math.max(goal.seconds * 1.25, ...goal.chart_data.map((period) => period.actual_seconds));
 	const target = (goal.seconds / max) * 100;
 
 	return (
-		<div className="relative h-24">
+		<div className="relative h-18" role="img" aria-label={`Last ${goal.chart_data.length} periods against the target`}>
 			<div
-				className="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-foreground/35"
+				className="pointer-events-none absolute inset-x-0 z-10 border-t border-muted-foreground/55"
 				style={{ bottom: `${target}%` }}
-			>
-				<span className="tabular absolute -top-3.5 right-0 text-[9.5px] text-muted-foreground">
-					{formatDuration(goal.seconds)}
-				</span>
-			</div>
-			<div className="flex h-full items-end gap-1">
+			/>
+			<div className="flex h-full items-end">
 				{goal.chart_data.map((period) => (
 					<Tooltip key={period.range.start}>
 						<TooltipTrigger asChild>
-							<div className="flex h-full flex-1 items-end">
+							<div className="flex h-full min-w-0 flex-1 items-end justify-center rounded-t-md px-px hover:bg-foreground/5">
 								<div
-									className="w-full rounded-t-[2px]"
+									className="w-full max-w-4.5 rounded-t-[3px]"
 									style={{
-										height: `${Math.max(2, (period.actual_seconds / max) * 100)}%`,
+										height: `${Math.max(3, (period.actual_seconds / max) * 100)}%`,
 										background: STATUS_COLOR[period.range_status],
-										opacity: period.actual_seconds ? 1 : 0.35,
 									}}
 								/>
 							</div>
 						</TooltipTrigger>
-						<TooltipContent side="top" className="text-[11px]">
-							<p className="text-muted-foreground">{period.range.text}</p>
-							<p className="tabular">
+						<TooltipContent side="top" className="tabular-nums">
+							<p className="opacity-70">{period.range.text}</p>
+							<p>
 								{formatDuration(period.actual_seconds)} · {period.range_status_reason}
 							</p>
 						</TooltipContent>
