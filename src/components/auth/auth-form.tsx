@@ -29,11 +29,12 @@ export function AuthForm({ socialProviders }: { socialProviders: Provider[] }) {
 	}
 
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-2.5">
 			{socialProviders.map((provider) => (
 				<Button
 					key={provider}
 					variant={provider === 'github' ? 'default' : 'outline'}
+					size="lg"
 					className="w-full"
 					disabled={pending !== null}
 					onClick={async () => {
