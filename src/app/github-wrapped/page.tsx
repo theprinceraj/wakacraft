@@ -56,7 +56,11 @@ export default function GithubWrappedLanding({ searchParams }: PageProps<'/githu
 			<SiteHeader
 				cta={
 					<StartPill
-						signedOut="Track your hours"
+						signedOut={
+							<>
+								Track <span className="max-[359px]:hidden">your </span>hours
+							</>
+						}
 						className="h-10 whitespace-nowrap max-md:ml-auto max-sm:pr-3 max-sm:pl-4"
 					/>
 				}

@@ -34,7 +34,7 @@ export function Pill({ href, children, className }: { href: string; children: Re
 }
 
 /** The primary call to action, which sends signed-in visitors to their dashboard instead of sign-in. */
-export function StartPill({ signedOut, className }: { signedOut: string; className?: string }) {
+export function StartPill({ signedOut, className }: { signedOut: React.ReactNode; className?: string }) {
 	const fallback = (
 		<Pill href="/login" className={className}>
 			{signedOut}
@@ -45,7 +45,8 @@ export function StartPill({ signedOut, className }: { signedOut: string; classNa
 			<SignedInSwitch
 				signedIn={
 					<Pill href="/dashboard" className={className}>
-						Open your dashboard
+						{/* Dropped on the narrowest phones so the header fits beside the logo. */}
+						Open <span className="max-[359px]:hidden">your </span>dashboard
 					</Pill>
 				}
 				signedOut={fallback}
@@ -75,7 +76,7 @@ export function Heading({
 export function SiteHeader({ cta }: { cta: React.ReactNode }) {
 	return (
 		<header className="sticky top-0 z-30 bg-background/85 backdrop-blur-md">
-			<div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-8 px-4 sm:px-6">
+			<div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 sm:gap-8 sm:px-6">
 				<Link href="/" className="text-foreground">
 					<Logo />
 				</Link>
