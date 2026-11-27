@@ -25,7 +25,7 @@ export const GET = route({ auth: 'none' }, async ({ request }) => {
 	if (!authorized(request.headers.get('authorization'))) throw new UnauthorizedException();
 	// Before the prebuild, so the demo's new day is rolled up with everyone else's. A demo failure must not cost
 	// real users their rollups or stalled imports, so it is only logged.
-	const demoHeartbeats = await demoService.appendRecent(process.env.DEMO_USERNAME).catch((error: unknown) => {
+	const demoHeartbeats = await demoService.refresh(process.env.DEMO_USERNAME).catch((error: unknown) => {
 		console.error('[cron] demo top-up failed', error);
 		return 0;
 	});

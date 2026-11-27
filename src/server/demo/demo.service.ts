@@ -65,14 +65,16 @@ class DemoService {
 	}
 
 	/**
-	 * Nightly top-up so the demo never goes stale: regenerates the last few days, so a missed night heals itself
-	 * (generation is deterministic and ingestion dedups). A no-op unless the username belongs to the demo account.
-	 * Returns how many heartbeats were generated, duplicates included.
+	 * Nightly refresh so the demo never goes stale. When nobody holds the username yet, seeds the demo from scratch, so
+	 * a deployment only needs DEMO_USERNAME set (no shell access to the database). Otherwise regenerates the last few
+	 * days, so a missed night heals itself (generation is deterministic and ingestion dedups). Never touches a real
+	 * account that holds the name. Returns how many heartbeats were generated, duplicates included.
 	 */
-	public async appendRecent(username: string | undefined): Promise<number> {
+	public async refresh(username: string | undefined): Promise<number> {
 		if (!username) return 0;
 		const profile = await userProfileService.findByUsername(username);
-		if (!profile?.isDemo) return 0;
+		if (!profile) return (await this.seed(username)).heartbeats;
+		if (!profile.isDemo) return 0;
 		const today = todayIn('UTC');
 		let heartbeats = 0;
 		for (let ago = TOP_UP_DAYS; ago >= 1; ago--)

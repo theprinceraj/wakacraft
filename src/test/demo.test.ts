@@ -36,11 +36,20 @@ describe('public demo account', () => {
 	});
 
 	it('is topped up nightly only when named as the demo account', async () => {
-		expect(await demoService.appendRecent(undefined)).toBe(0);
-		expect(await demoService.appendRecent('nobody-here')).toBe(0);
+		expect(await demoService.refresh(undefined)).toBe(0);
+		const before = await mongoHeartbeatService.count({ userId });
+		expect(await demoService.refresh(username)).toBeGreaterThan(0);
+		expect(await mongoHeartbeatService.count({ userId })).toBe(before);
 		await mongoUserProfileService.updateOne({ userId }, { $set: { isDemo: false } });
-		expect(await demoService.appendRecent(username)).toBe(0);
+		expect(await demoService.refresh(username)).toBe(0);
 		await mongoUserProfileService.updateOne({ userId }, { $set: { isDemo: true } });
+	});
+
+	it('is seeded by the nightly refresh when nobody holds the name yet', async () => {
+		// The demo account is found by its email and renamed, as when DEMO_USERNAME changes.
+		expect(await demoService.refresh('demo-fresh')).toBeGreaterThan(1000);
+		const view = await publicProfileService.getPageView('demo-fresh');
+		expect(view.stats?.total_seconds).toBeGreaterThan(0);
 	});
 
 	it('refuses to have a sign-in account attached', async () => {
