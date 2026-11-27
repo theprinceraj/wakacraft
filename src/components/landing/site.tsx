@@ -15,6 +15,7 @@ export const NAV = [
 	['Features', '/#features'],
 	['How it works', '/#how-it-works'],
 	['Open source', '/#open-source'],
+	['GitHub Wrapped', '/github-wrapped'],
 ] as const;
 
 export function Pill({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {

@@ -62,6 +62,7 @@ export const config = {
 	matcher: [
 		'/u/:path*',
 		'/@:username',
+		'/github-wrapped/:path*',
 		'/api/v1/:path*',
 		'/dashboard/:path*',
 		'/projects/:path*',

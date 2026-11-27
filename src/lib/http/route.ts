@@ -5,6 +5,7 @@ import { connectMongo } from '@/lib/mongo/connection';
 import { rateLimitService, type RateLimitBucket } from '@/server/rate-limit/rate-limit.service';
 
 import { rateLimitKey, resolveCaller, type Caller } from './authenticate';
+import { clientIp } from './client-ip';
 
 import type { OAuthScope } from '@/lib/util/OAuth';
 import {
@@ -73,20 +74,6 @@ function validationError(error: z.ZodError): Response {
 	return NextResponse.json({ error: error.issues[0]?.message ?? 'Invalid request', errors }, { status: 400 });
 }
 
-/**
- * The client's address, from headers the platform sets and clients can't forge: Vercel's `x-vercel-forwarded-for`,
- * then a reverse proxy's `x-real-ip`. `x-forwarded-for` is client-controlled unless a proxy rewrites it, so it is
- * read only with `TRUST_PROXY=true`. Null when none applies.
- */
-function clientIp(request: NextRequest): string | null {
-	const firstHop = (name: string) => request.headers.get(name)?.split(',')[0]?.trim() || null;
-	return (
-		firstHop('x-vercel-forwarded-for') ??
-		firstHop('x-real-ip') ??
-		(process.env.TRUST_PROXY === 'true' ? firstHop('x-forwarded-for') : null)
-	);
-}
-
 async function readJsonBody(request: NextRequest): Promise<unknown> {
 	const text = await request.text();
 	if (!text) return undefined;
@@ -135,7 +122,7 @@ export function route<
 			if (options.rateLimit) {
 				// Anonymous callers are counted per IP; with no trustworthy IP they aren't counted, rather than all sharing
 				// one bucket that a single client could exhaust for everyone.
-				const ip = caller ? null : clientIp(request);
+				const ip = caller ? null : clientIp(request.headers);
 				const key = caller ? rateLimitKey(caller) : ip && `ip:${ip}`;
 				if (key) await rateLimitService.consume(key, options.rateLimit);
 			}

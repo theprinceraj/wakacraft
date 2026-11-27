@@ -37,6 +37,11 @@ export const LIMITS = {
 	 * such as GitHub's camo, which funnel many readers through few IPs, so this is set well above one person's use.
 	 */
 	public: { limit: 3000, windowSeconds: 600 },
+	/**
+	 * GitHub Wrapped pages and their share cards, per IP. Each uncached one spends a request of the instance's
+	 * GITHUB_TOKEN quota (5000 an hour), so this lets a person look up dozens of friends but stops a scraper.
+	 */
+	github_wrapped: { limit: 120, windowSeconds: 600 },
 } satisfies Record<string, Limit>;
 
 export type RateLimitBucket = keyof typeof LIMITS;

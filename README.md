@@ -64,7 +64,8 @@ The full feature-parity plan is in [docs/ROADMAP.md](docs/ROADMAP.md).
 1. Create a MongoDB Atlas cluster and copy the connection string.
 2. Import the repo into Vercel and set `MONGODB_URI`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` (your public URL),
    `MONGODB_TRANSACTIONS=true`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (OAuth app callback
-   `https://<your-domain>/api/auth/callback/github`), and optionally `GOOGLE_*`.
+   `https://<your-domain>/api/auth/callback/github`), and optionally `GOOGLE_*` and `GITHUB_TOKEN` (a scope-less
+   token that switches on the public GitHub Wrapped page at `/github-wrapped`).
 3. Users set `api_url = https://<your-domain>/api/v1`.
 
 ## Development
