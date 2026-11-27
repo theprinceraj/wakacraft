@@ -4,7 +4,13 @@ import { orgService } from '@/server/org/org.service';
 import { DurationsQuerySchema } from '@/server/stats/stats.request.dto';
 
 export const GET = route(
-	{ auth: 'required', scope: 'read_orgs', params: DashboardMemberParamsSchema, query: DurationsQuerySchema },
+	{
+		auth: 'required',
+		rateLimit: 'aggregate',
+		scope: 'read_orgs',
+		params: DashboardMemberParamsSchema,
+		query: DurationsQuerySchema,
+	},
 	async ({ caller, params, query }) =>
 		orgService.memberDurations(
 			await requireSelf(params.user, caller),

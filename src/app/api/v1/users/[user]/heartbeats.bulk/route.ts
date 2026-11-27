@@ -1,3 +1,4 @@
+import { rateLimitKey } from '@/lib/http/authenticate';
 import { requireSelf, route, UserParamSchema } from '@/lib/http/route';
 import { BulkHeartbeatsRequestSchema, DeleteHeartbeatsRequestSchema } from '@/server/heartbeat/heartbeat.request.dto';
 import { heartbeatService } from '@/server/heartbeat/heartbeat.service';
@@ -16,7 +17,7 @@ export const POST = route(
 	async ({ request, caller, params, body }) => {
 		const userId = await requireSelf(params.user, caller);
 		// A 429 keeps the batch in wakatime-cli's offline queue, to be retried later.
-		await rateLimitService.consume(userId, 'heartbeats', body.length);
+		await rateLimitService.consume(rateLimitKey(caller), 'heartbeats', body.length);
 		return {
 			responses: await heartbeatService.ingest(userId, body, {
 				userAgent: request.headers.get('user-agent'),

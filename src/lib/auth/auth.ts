@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { mongodbAdapter } from 'better-auth/adapters/mongodb';
-import { createAuthMiddleware } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { nextCookies } from 'better-auth/next-js';
 import { MongoClient } from 'mongodb';
 
@@ -38,6 +38,18 @@ export const auth = betterAuth({
 	account: { accountLinking: { enabled: true, trustedProviders: ['github', 'google'] } },
 	session: { cookieCache: { enabled: true, maxAge: 5 * 60 } },
 	databaseHooks: {
+		account: {
+			create: {
+				// The demo user has no account, so nobody can sign in as it. Account linking matches users by email, so
+				// refuse to attach one to it should its address ever be claimed.
+				before: async (account) => {
+					const { userProfileService } = await import('@/server/user/user-profile.service');
+					if (await userProfileService.isDemo(account.userId)) {
+						throw new APIError('FORBIDDEN', { message: 'The demo account cannot be signed in to' });
+					}
+				},
+			},
+		},
 		user: {
 			create: {
 				after: async (user) => {

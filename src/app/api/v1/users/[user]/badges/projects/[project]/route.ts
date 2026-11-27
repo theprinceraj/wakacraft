@@ -14,7 +14,7 @@ const ParamsSchema = z.object({
 
 /** README badge: `![wakacraft](…/users/<username>/badges/projects/<project>.svg)`. Public projects only. */
 export const GET = route(
-	{ auth: 'none', params: ParamsSchema },
+	{ auth: 'none', rateLimit: 'public', params: ParamsSchema },
 	async ({ params }) =>
 		new Response(await shareableService.projectBadge(params.user, params.project), {
 			headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=600' },

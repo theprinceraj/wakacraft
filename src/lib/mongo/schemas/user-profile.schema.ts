@@ -40,6 +40,8 @@ export const UserProfileSchema = new Schema<IUserProfileZodSchema>(
 		editorsUsedPublic: { type: SchemaTypes.Boolean, required: true, default: false },
 		categoriesUsedPublic: { type: SchemaTypes.Boolean, required: true, default: false },
 		osUsedPublic: { type: SchemaTypes.Boolean, required: true, default: false },
+		/** The synthetic public demo account: never ranked on the public leaderboard or counted in global stats. */
+		isDemo: { type: SchemaTypes.Boolean, required: true, default: false },
 		lastHeartbeatAt: { type: SchemaTypes.Date, required: false },
 		lastPlugin: { type: SchemaTypes.String, required: false },
 		lastProject: { type: SchemaTypes.String, required: false },

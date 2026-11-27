@@ -75,7 +75,7 @@ class GlobalStatsService {
 		const cached = await mongoGlobalStatsService.findOne({ range });
 		if (cached && Date.now() - cached.computedAt.getTime() < CACHE_MINUTES * 60_000) return cached;
 
-		const profiles = await mongoUserProfileService.find({ loggedTimePublic: true }, [
+		const profiles = await mongoUserProfileService.find({ loggedTimePublic: true, isDemo: { $ne: true } }, [
 			'userId',
 			'languagesUsedPublic',
 			'editorsUsedPublic',

@@ -19,6 +19,11 @@ class UserProfileService {
 		return (await mongoUserProfileService.findOne({ userId })) ?? this.ensureProfile(userId);
 	}
 
+	/** Whether this is the synthetic public demo account, which nobody may sign in to. */
+	public async isDemo(userId: string): Promise<boolean> {
+		return Boolean((await mongoUserProfileService.findOne({ userId }))?.isDemo);
+	}
+
 	public async findByUsername(username: string): Promise<IUserProfileZodSchema | null> {
 		return mongoUserProfileService.findOne({ username: username.toLowerCase() });
 	}

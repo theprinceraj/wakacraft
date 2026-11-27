@@ -11,7 +11,7 @@ export const GET = route({ auth: 'session', params: UserParamSchema }, async ({ 
 );
 
 export const POST = route(
-	{ auth: 'session', params: UserParamSchema, body: StartWakatimeImportSchema, status: 201 },
+	{ auth: 'session', rateLimit: 'imports', params: UserParamSchema, body: StartWakatimeImportSchema, status: 201 },
 	async ({ caller, params, body }) => wakatimeImportService.start(await requireSelf(params.user, caller), body.token),
 );
 

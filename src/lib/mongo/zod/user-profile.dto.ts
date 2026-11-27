@@ -27,6 +27,7 @@ export const UserProfileZodSchema = z.object({
 	editorsUsedPublic: z.boolean().default(false),
 	categoriesUsedPublic: z.boolean().default(false),
 	osUsedPublic: z.boolean().default(false),
+	isDemo: z.boolean().default(false),
 	lastHeartbeatAt: z
 		.union([z.date(), z.iso.datetime({ offset: true })])
 		.pipe(z.coerce.date())

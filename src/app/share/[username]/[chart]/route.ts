@@ -19,15 +19,18 @@ const QuerySchema = z.object({ theme: z.enum(['dark', 'light']).default('dark') 
 const CACHE = 'public, max-age=600';
 
 /** Embeddable charts: `/share/<username>/total.svg` (all time), `languages.svg`, `editors.json`, `activity.svg`, … */
-export const GET = route({ auth: 'none', params: ParamsSchema, query: QuerySchema }, async ({ params, query }) => {
-	const { chart, format } = params.chart;
-	if (format === 'json') {
-		return Response.json(
-			{ data: await shareableService.chartData(params.username, chart) },
-			{ headers: { 'cache-control': CACHE } },
-		);
-	}
-	return new Response(await shareableService.chartSvg(params.username, chart, query.theme), {
-		headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': CACHE },
-	});
-});
+export const GET = route(
+	{ auth: 'none', rateLimit: 'public', params: ParamsSchema, query: QuerySchema },
+	async ({ params, query }) => {
+		const { chart, format } = params.chart;
+		if (format === 'json') {
+			return Response.json(
+				{ data: await shareableService.chartData(params.username, chart) },
+				{ headers: { 'cache-control': CACHE } },
+			);
+		}
+		return new Response(await shareableService.chartSvg(params.username, chart, query.theme), {
+			headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': CACHE },
+		});
+	},
+);
