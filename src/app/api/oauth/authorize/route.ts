@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { auth } from '@/lib/auth/auth';
+import { HttpError } from '@/lib/http/errors';
 import { connectMongo } from '@/lib/mongo/connection';
 import { AuthorizeQuerySchema } from '@/server/oauth/oauth.request.dto';
 import { OAuthError, oauthService } from '@/server/oauth/oauth.service';
@@ -35,6 +36,8 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		// Unknown client or unregistered redirect URI: never redirect there.
 		if (error instanceof OAuthError) return NextResponse.json({ error: error.message }, { status: 400 });
+		// The signed-in account was deleted meanwhile (a stale cookie-cached session).
+		if (error instanceof HttpError) return NextResponse.json({ error: error.message }, { status: error.status });
 		throw error;
 	}
 }

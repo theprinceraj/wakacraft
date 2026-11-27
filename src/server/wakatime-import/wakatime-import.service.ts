@@ -153,6 +153,9 @@ class WakatimeImportService {
 				return;
 			}
 
+			// The fetch can take a while: if the job was cancelled or deleted (account deletion) meanwhile, write nothing.
+			if (!(await mongoWakatimeImportService.exists({ id: job.id, status: WakatimeImportStatuses.Running }))) return;
+
 			let imported = 0;
 			for (let index = 0; index < heartbeats.length; index += INGEST_CHUNK) {
 				const results = await heartbeatService.ingest(

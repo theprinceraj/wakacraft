@@ -36,7 +36,49 @@ export const auth = betterAuth({
 	emailAndPassword: { enabled: false },
 	socialProviders,
 	account: { accountLinking: { enabled: true, trustedProviders: ['github', 'google'] } },
-	session: { cookieCache: { enabled: true, maxAge: 5 * 60 } },
+	// The cookie cache spares a session lookup per request, but a revoked session (sign-out elsewhere, a deleted
+	// account) stays valid on other devices until it expires, so keep it short: a minute.
+	session: { cookieCache: { enabled: true, maxAge: 60 } },
+	user: {
+		// `POST /api/auth/delete-user`: needs a session from the database (not the cookie cache) that was created
+		// within `session.freshAge` (a day); an older session must sign in again first. Better Auth then removes the
+		// user, its sessions and its accounts. Our own data goes first, in `beforeDelete`, and again in `afterDelete`
+		// for anything an in-flight request (a bulk heartbeat, an import, another device's cached session) wrote in
+		// between.
+		deleteUser: {
+			enabled: true,
+			beforeDelete: async (user) => {
+				const [{ connectMongo }, { HttpError }, { accountDeletionService }] = await Promise.all([
+					import('@/lib/mongo/connection'),
+					import('@/lib/http/errors'),
+					import('@/server/account/account-deletion.service'),
+				]);
+				await connectMongo();
+				try {
+					await accountDeletionService.deleteAccountData(user.id);
+				} catch (error) {
+					// Refusals (demo account, owned teams) reach the client with their status and message.
+					if (error instanceof HttpError) {
+						throw new APIError('BAD_REQUEST', { message: error.message }, undefined, error.status);
+					}
+					throw error;
+				}
+			},
+			afterDelete: async (user) => {
+				try {
+					const [{ connectMongo }, { accountDeletionService }] = await Promise.all([
+						import('@/lib/mongo/connection'),
+						import('@/server/account/account-deletion.service'),
+					]);
+					await connectMongo();
+					await accountDeletionService.deleteAccountData(user.id, { afterUserDeleted: true });
+				} catch (error) {
+					// The user is already deleted: report success and leave the leftovers to the log.
+					console.error(`[delete-user] cleanup after deleting user ${user.id} failed`, error);
+				}
+			},
+		},
+	},
 	databaseHooks: {
 		account: {
 			create: {

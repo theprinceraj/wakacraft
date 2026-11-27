@@ -69,8 +69,15 @@ export default function PrivacyPage() {
 			<section>
 				<h2>Export and deletion</h2>
 				<p>
-					You can export your heartbeats and daily summaries as data dumps from Settings at any time. There is currently
-					no self-service account deletion. To have your account and its data deleted,{' '}
+					You can export your heartbeats and daily summaries as data dumps from Settings at any time. You can also
+					delete your account yourself under Settings → Delete account. That immediately and permanently removes your
+					profile, sign-in, heartbeats and everything derived from them, API keys, goals, rules, imports, clients and
+					invoices, the leaderboards and OAuth apps you created, and teams where you are the only member. It also takes
+					you off other leaderboards and teams. A team you own that others belong to passes to another owner; if it has
+					none, delete the team or remove its other members first.
+				</p>
+				<p>
+					For anything else about your data,{' '}
 					{LEGAL_CONTACT ? (
 						<>
 							write to <a href={`mailto:${LEGAL_CONTACT}`}>{LEGAL_CONTACT}</a>.

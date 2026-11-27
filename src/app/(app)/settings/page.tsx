@@ -6,6 +6,7 @@ import { PageSkeleton } from '@/components/app/states';
 import { Panel } from '@/components/dashboard/panel';
 import { ApiKeys } from '@/components/settings/api-keys';
 import { CustomRulesEditor } from '@/components/settings/custom-rules-editor';
+import { DeleteAccount } from '@/components/settings/delete-account';
 import { ImportExport } from '@/components/settings/import-export';
 import { AuthorizedApps, DeveloperApps } from '@/components/settings/oauth-apps';
 import { PreferencesForm } from '@/components/settings/preferences-form';
@@ -64,6 +65,7 @@ async function Settings() {
 		{ id: 'import-export', label: 'Import and export', group: 'Data' },
 		{ id: 'authorized-apps', label: 'Authorized apps', group: 'Apps' },
 		{ id: 'developer-apps', label: 'Developer apps', group: 'Apps' },
+		{ id: 'delete-account', label: 'Delete account', group: 'Danger zone' },
 	];
 
 	return (
@@ -159,6 +161,15 @@ async function Settings() {
 
 					<Panel id="developer-apps" className={SECTION} label="Developer apps">
 						<DeveloperApps initial={apps.data} baseUrl={baseUrl} />
+					</Panel>
+
+					<Panel
+						id="delete-account"
+						className={SECTION}
+						label="Delete account"
+						description="Permanently delete your account and everything in it."
+					>
+						<DeleteAccount confirmText={user.username ?? user.email ?? 'delete my account'} />
 					</Panel>
 
 					<p className="pt-2 text-center text-xs text-muted-foreground">

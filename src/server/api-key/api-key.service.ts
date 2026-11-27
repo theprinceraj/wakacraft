@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { mongoApiKeyService } from '@/lib/mongo/api-key/api-key.service';
 import { BadRequestException, NotFoundException } from '@/lib/http/errors';
+import { userService } from '@/server/user/user.service';
 
 import type { IApiKeyZodSchema } from '@/lib/mongo/zod';
 
@@ -19,6 +20,7 @@ class ApiKeyService {
 
 	/** Returns the plaintext key exactly once; only its hash is stored. */
 	public async create(userId: string, name: string): Promise<{ key: string; apiKey: IApiKeyZodSchema }> {
+		await userService.assertExists(userId);
 		const count = await mongoApiKeyService.count({ userId });
 		if (count >= MAX_KEYS_PER_USER) throw new BadRequestException(`You can have at most ${MAX_KEYS_PER_USER} API keys`);
 
