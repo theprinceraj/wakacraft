@@ -4,7 +4,10 @@ import type { WrappedDay } from '@/server/github-wrapped/derive';
 
 const OPACITY = [0, 0.32, 0.55, 0.78, 1];
 
-/** A year of contribution days in columns of weeks, Monday on top, shaded like GitHub's graph in wakacraft orange. */
+/**
+ * A year of contribution days in columns of weeks, Monday on top, shaded like GitHub's graph in wakacraft orange.
+ * The cells shrink with the card, so the whole year fits on a phone without sideways scrolling.
+ */
 export function ContributionGraph({ days }: { days: WrappedDay[] }) {
 	const first = days[0]?.date;
 	// Empty cells before the first day line it up under its weekday.
@@ -12,11 +15,11 @@ export function ContributionGraph({ days }: { days: WrappedDay[] }) {
 	const weeks = Math.ceil((offset + days.length) / 7);
 
 	return (
-		<div className="scroll-x-quiet -mx-1 max-w-full px-1">
+		<div className="min-w-0">
 			<div
 				role="img"
 				aria-label={`Contribution graph: ${days.filter((day) => day.count).length} active days`}
-				className="grid min-w-[640px] gap-[3px]"
+				className="grid gap-[2px] sm:gap-[3px]"
 				style={{
 					gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`,
 					gridTemplateRows: 'repeat(7, minmax(0, 1fr))',
@@ -30,7 +33,7 @@ export function ContributionGraph({ days }: { days: WrappedDay[] }) {
 					<span
 						key={day.date}
 						title={`${day.count.toLocaleString('en-US')} on ${formatDay(day.date, { month: 'long', day: 'numeric' })}`}
-						className="aspect-square rounded-[3px]"
+						className="aspect-square rounded-[1.5px] sm:rounded-[3px]"
 						style={
 							day.level
 								? { background: 'var(--heat)', opacity: OPACITY[day.level] }

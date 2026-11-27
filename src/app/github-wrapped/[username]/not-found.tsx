@@ -8,7 +8,14 @@ export const metadata: Metadata = { title: 'GitHub user not found' };
 export default function GithubWrappedNotFound() {
 	return (
 		<div className="landing flex min-h-full flex-1 flex-col">
-			<SiteHeader cta={<StartPill signedOut="Track your hours" className="h-10 max-md:ml-auto" />} />
+			<SiteHeader
+				cta={
+					<StartPill
+						signedOut="Track your hours"
+						className="h-10 whitespace-nowrap max-md:ml-auto max-sm:pr-3 max-sm:pl-4"
+					/>
+				}
+			/>
 			<main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-20 sm:px-6">
 				<p className="tabular text-sm text-muted-foreground">404</p>
 				<Heading as="h1" className="mt-3 text-5xl leading-[1.02] sm:text-6xl">

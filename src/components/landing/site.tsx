@@ -79,9 +79,17 @@ export function SiteHeader({ cta }: { cta: React.ReactNode }) {
 				<Link href="/" className="text-foreground">
 					<Logo />
 				</Link>
-				<nav className="ml-auto flex items-center gap-7 text-sm max-md:hidden">
+				<nav className="ml-auto flex items-center gap-6 text-sm whitespace-nowrap max-md:hidden lg:gap-7">
 					{NAV.map(([label, href]) => (
-						<a key={href} href={href} className="text-foreground/80 transition-colors hover:text-foreground">
+						<a
+							key={href}
+							href={href}
+							// Four links and the button don't fit a tablet's width; the footer still links GitHub Wrapped.
+							className={cn(
+								'text-foreground/80 transition-colors hover:text-foreground',
+								href === '/github-wrapped' && 'max-lg:hidden',
+							)}
+						>
 							{label}
 						</a>
 					))}

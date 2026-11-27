@@ -76,7 +76,14 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 export default function GithubWrappedPage({ params, searchParams }: Props) {
 	return (
 		<div className="landing flex min-h-full flex-1 flex-col">
-			<SiteHeader cta={<StartPill signedOut="Track your hours" className="h-10 max-md:ml-auto" />} />
+			<SiteHeader
+				cta={
+					<StartPill
+						signedOut="Track your hours"
+						className="h-10 whitespace-nowrap max-md:ml-auto max-sm:pr-3 max-sm:pl-4"
+					/>
+				}
+			/>
 			<main className="mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 pt-6 pb-24 sm:px-6">
 				<Suspense fallback={<WrappedSkeleton />}>
 					<Wrapped params={params} searchParams={searchParams} />
@@ -197,7 +204,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 							</div>
 						</div>
 						{years.length > 1 ? (
-							<nav className="scroll-x-quiet flex max-w-full gap-1.5" aria-label="Year">
+							<nav className="flex max-w-full flex-wrap gap-1.5" aria-label="Year">
 								{years.map((item) => (
 									<Link
 										key={item}
@@ -303,7 +310,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 							{w.isPartialYear ? (
 								<div>
 									<dt className="text-sm text-muted-foreground">Current streak</dt>
-									<dd className="mt-1 flex items-center gap-2 text-3xl font-semibold tracking-tight">
+									<dd className="mt-1 flex items-center gap-2 text-3xl font-semibold tracking-tight whitespace-nowrap">
 										{nf(w.currentStreak)} {w.currentStreak === 1 ? 'day' : 'days'}
 										{w.currentStreak >= 3 ? <Flame className="size-6 text-on-ink-ember" aria-hidden /> : null}
 									</dd>
@@ -331,7 +338,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 					) : null}
 
 					{/* 5. Rhythm */}
-					<div className="grid gap-4 md:grid-cols-2">
+					<div className="grid grid-cols-1 gap-4 *:min-w-0 md:grid-cols-2">
 						<section className="rounded-[28px] bg-card p-6 sm:p-8">
 							<Reveal>
 								<Eyebrow>Your week</Eyebrow>
@@ -386,7 +393,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 
 					{/* 6. Repos and languages */}
 					{w.repos.length ? (
-						<div className="grid gap-4 md:grid-cols-[1.4fr_1fr]">
+						<div className="grid grid-cols-1 gap-4 *:min-w-0 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
 							<section className="rounded-[28px] bg-card p-6 sm:p-8">
 								<Reveal>
 									<Eyebrow>Where your commits went</Eyebrow>
@@ -422,7 +429,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 														) : null}
 													</p>
 												</div>
-												<span className="text-sm text-muted-foreground tabular-nums">
+												<span className="shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
 													{nf(repo.commits)} {repo.commits === 1 ? 'commit' : 'commits'}
 												</span>
 											</li>
@@ -478,7 +485,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 			)}
 
 			{/* 8. The missing stat: the pitch */}
-			<section className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
+			<section className="grid grid-cols-1 gap-4 *:min-w-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
 				<div className="flex flex-col justify-between gap-10 rounded-[28px] bg-ember p-6 text-primary-foreground sm:p-10">
 					<Eyebrow>Hours spent coding in {w.year}</Eyebrow>
 					<p className="text-[clamp(4rem,12vw,7rem)] leading-none font-semibold tracking-[-0.05em]">
@@ -513,7 +520,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 			</section>
 
 			{/* 9. Share */}
-			<section className="flex flex-col gap-10 rounded-[28px] bg-card p-6 sm:p-10 md:flex-row md:items-end md:justify-between">
+			<section className="flex flex-col gap-10 rounded-[28px] bg-card p-6 sm:p-10 lg:flex-row lg:items-end lg:justify-between">
 				<div>
 					<Eyebrow>Pass it on</Eyebrow>
 					<p className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Share your Wrapped</p>
@@ -521,7 +528,7 @@ function Story({ wrapped: w }: { wrapped: GithubWrapped }) {
 						<ShareActions url={url} text={shareText} />
 					</div>
 				</div>
-				<div className="md:max-w-sm md:flex-1">
+				<div className="w-full max-w-md lg:max-w-sm lg:flex-1">
 					<p className="mb-3 text-sm text-muted-foreground">Wrap someone else</p>
 					<UsernameForm />
 				</div>

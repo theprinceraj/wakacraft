@@ -53,7 +53,14 @@ async function Year() {
 export default function GithubWrappedLanding({ searchParams }: PageProps<'/github-wrapped'>) {
 	return (
 		<div className="landing flex min-h-full flex-1 flex-col">
-			<SiteHeader cta={<StartPill signedOut="Track your hours" className="h-10 max-md:ml-auto" />} />
+			<SiteHeader
+				cta={
+					<StartPill
+						signedOut="Track your hours"
+						className="h-10 whitespace-nowrap max-md:ml-auto max-sm:pr-3 max-sm:pl-4"
+					/>
+				}
+			/>
 
 			<main className="flex-1 overflow-x-clip">
 				<section className="mx-auto grid w-full max-w-7xl items-center gap-12 px-4 pt-12 pb-20 sm:px-6 lg:grid-cols-[1fr_480px] lg:pt-20 lg:pb-28">

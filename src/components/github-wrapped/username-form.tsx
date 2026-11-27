@@ -44,11 +44,14 @@ export function UsernameForm({
 		>
 			<div
 				className={cn(
-					'flex h-14 items-center rounded-full bg-card pr-1.5 pl-5 shadow-[inset_0_0_0_1px_var(--input)] transition-shadow focus-within:shadow-[inset_0_0_0_2px_var(--ember)]',
+					'flex h-14 items-center rounded-full bg-card pr-1.5 pl-4 sm:pl-5 shadow-[inset_0_0_0_1px_var(--input)] transition-shadow focus-within:shadow-[inset_0_0_0_2px_var(--ember)]',
 					error && 'shadow-[inset_0_0_0_1.5px_var(--destructive)]',
 				)}
 			>
-				<label htmlFor="github-username" className="shrink-0 text-sm text-muted-foreground select-none">
+				<label
+					htmlFor="github-username"
+					className="sr-only shrink-0 text-sm text-muted-foreground select-none sm:not-sr-only"
+				>
 					github.com/
 				</label>
 				<input
