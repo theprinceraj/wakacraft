@@ -9,7 +9,7 @@ export const GET = route({ auth: 'required', params: UserParamSchema }, async ({
 });
 
 export const POST = route(
-	{ auth: 'required', params: UserParamSchema, body: CreateDataDumpSchema, status: 201 },
+	{ auth: 'required', rateLimit: 'data_dumps', params: UserParamSchema, body: CreateDataDumpSchema, status: 201 },
 	async ({ request, caller, params, body }) => ({
 		data: toDataDumpResponse(
 			await dataDumpService.create(await requireSelf(params.user, caller), body.type),

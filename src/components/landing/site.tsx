@@ -136,6 +136,16 @@ export function SiteFooter() {
 								Self-host
 							</a>
 						</li>
+						<li>
+							<Link href="/privacy" className="hover:text-foreground">
+								Privacy
+							</Link>
+						</li>
+						<li>
+							<Link href="/terms" className="hover:text-foreground">
+								Terms
+							</Link>
+						</li>
 					</ul>
 				</div>
 			</div>

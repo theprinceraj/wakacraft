@@ -1,4 +1,6 @@
 import { ArrowUpRight, Check } from 'lucide-react';
+import { connection } from 'next/server';
+import { Suspense } from 'react';
 
 import { ActivityHeatmap, HEATMAP_WEEKS } from '@/components/landing/activity-heatmap';
 import { HeroDiagram } from '@/components/landing/hero-diagram';
@@ -57,6 +59,13 @@ function TextLink({ href, children }: { href: string; children: React.ReactNode 
 	);
 }
 
+/** The demo profile link, read per request so DEMO_USERNAME set at runtime applies; absent when there is no demo. */
+async function DemoLink() {
+	await connection();
+	const username = process.env.DEMO_USERNAME?.trim().toLowerCase();
+	return username ? <TextLink href={`/@${encodeURIComponent(username)}`}>See a live demo</TextLink> : null;
+}
+
 export default function HomePage() {
 	return (
 		<div className="landing flex min-h-full flex-1 flex-col">
@@ -76,6 +85,9 @@ export default function HomePage() {
 						</p>
 						<div className="mt-9 flex flex-wrap items-center gap-6">
 							<StartPill signedOut="Start tracking free" />
+							<Suspense fallback={null}>
+								<DemoLink />
+							</Suspense>
 							<TextLink href="#how-it-works">see how it works</TextLink>
 						</div>
 					</div>

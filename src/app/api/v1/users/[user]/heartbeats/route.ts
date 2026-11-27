@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { rateLimitKey } from '@/lib/http/authenticate';
 import { requireSelf, route, UserParamSchema } from '@/lib/http/route';
 import { DateQuerySchema } from '@/server/heartbeat/heartbeat.request.dto';
 import { heartbeatService } from '@/server/heartbeat/heartbeat.service';
@@ -20,7 +21,7 @@ export const POST = route(
 	{ auth: 'required', scope: 'write_heartbeats', params: UserParamSchema },
 	async ({ request, caller, params }) => {
 		const userId = await requireSelf(params.user, caller);
-		await rateLimitService.consume(userId, 'heartbeats');
+		await rateLimitService.consume(rateLimitKey(caller), 'heartbeats');
 		const body: unknown = await request.json().catch(() => null);
 		const [[result, status]] = await heartbeatService.ingest(userId, [body], {
 			userAgent: request.headers.get('user-agent'),

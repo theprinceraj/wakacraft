@@ -20,6 +20,15 @@ const CORS_HEADERS = {
 	'Access-Control-Max-Age': '86400',
 };
 
+const isDecodable = (pathname: string) => {
+	try {
+		decodeURIComponent(pathname);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
 /**
  * - API: CORS so the WakaTime browser extensions (which post from their own origin with an API key) work.
  *   Cookies are never sent cross-origin, so `*` doesn't expose sessions.
@@ -28,6 +37,10 @@ const CORS_HEADERS = {
  */
 export function proxy(request: NextRequest) {
 	const { pathname } = request.nextUrl;
+
+	// Next answers a path segment that isn't valid percent-encoding (e.g. `/u/%E0%A4`) with a 500 before any route
+	// code runs; refuse it here as the client error it is.
+	if (!isDecodable(pathname)) return new NextResponse('Bad Request', { status: 400 });
 
 	if (pathname.startsWith('/api/v1/')) {
 		if (request.method === 'OPTIONS') return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -47,6 +60,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
 	matcher: [
+		'/u/:path*',
+		'/@:username',
 		'/api/v1/:path*',
 		'/dashboard/:path*',
 		'/projects/:path*',

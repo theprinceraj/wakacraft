@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import Link from 'next/link';
 import { Suspense } from 'react';
 
 import { AuthForm } from '@/components/auth/auth-form';
@@ -25,6 +26,17 @@ export default function LoginPage() {
 					<AuthForm socialProviders={enabledSocialProviders} />
 				</Suspense>
 			</div>
+			<p className="mt-4 text-xs text-muted-foreground">
+				By signing in you agree to the{' '}
+				<Link href="/terms" className="underline underline-offset-4 hover:text-foreground">
+					Terms
+				</Link>{' '}
+				and{' '}
+				<Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+					Privacy Policy
+				</Link>
+				.
+			</p>
 			<ul className="mt-10 divide-y border-y">
 				{PROMISES.map((promise) => (
 					<li key={promise} className="flex items-center gap-3 py-3.5 text-sm">

@@ -18,7 +18,8 @@ import {
 /**
  * Asks before anything hard to undo. Pass `trigger`, or control it with `open` when it's opened from a menu.
  * Stays open while `onConfirm` runs, so a slow request can't be fired twice. If it throws, the error is shown and the
- * dialog stays open.
+ * dialog stays open; if it returns `false`, the dialog stays open without a toast (the caller shows why). `children`
+ * go between the description and the buttons, e.g. a field that must be filled in before `disabled` lifts.
  */
 export function ConfirmDialog({
 	trigger,
@@ -28,6 +29,8 @@ export function ConfirmDialog({
 	description,
 	action,
 	onConfirm,
+	disabled = false,
+	children,
 }: {
 	trigger?: ReactNode;
 	open?: boolean;
@@ -35,7 +38,9 @@ export function ConfirmDialog({
 	title: ReactNode;
 	description: ReactNode;
 	action: ReactNode;
-	onConfirm: () => void | Promise<void>;
+	onConfirm: () => void | boolean | Promise<void | boolean>;
+	disabled?: boolean;
+	children?: ReactNode;
 }) {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [pending, setPending] = useState(false);
@@ -48,8 +53,7 @@ export function ConfirmDialog({
 	async function confirm() {
 		setPending(true);
 		try {
-			await onConfirm();
-			setOpen(false);
+			if ((await onConfirm()) !== false) setOpen(false);
 		} catch (error) {
 			// Stays open, so the user can retry or cancel knowing it didn't happen.
 			toast.error(error instanceof Error ? error.message : 'Something went wrong');
@@ -66,13 +70,14 @@ export function ConfirmDialog({
 					<DialogTitle className="pr-0">{title}</DialogTitle>
 					<DialogDescription>{description}</DialogDescription>
 				</DialogHeader>
+				{children}
 				<DialogFooter>
 					<DialogClose asChild>
 						<Button variant="ghost" disabled={pending}>
 							Cancel
 						</Button>
 					</DialogClose>
-					<Button variant="danger" onClick={confirm} disabled={pending}>
+					<Button variant="danger" onClick={confirm} disabled={pending || disabled}>
 						{action}
 					</Button>
 				</DialogFooter>

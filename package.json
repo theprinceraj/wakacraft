@@ -16,7 +16,8 @@
 		"sync:force": "bun ./src/lib/scripts/sync.ts --force",
 		"preflight": "bun run sync && bun run format && bun run typecheck && bun run lint && bun run test && bun run build",
 		"db": "bun ./scripts/dev-db.ts",
-		"seed:demo": "bun ./scripts/seed-demo.ts"
+		"seed:demo": "bun ./scripts/seed-demo.ts",
+		"seed:public-demo": "bun ./scripts/seed-public-demo.ts"
 	},
 	"dependencies": {
 		"@date-fns/tz": "^1.5.0",

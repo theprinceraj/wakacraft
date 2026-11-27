@@ -8,7 +8,16 @@ export interface Caller {
 	via: 'session' | 'api_key' | 'oauth';
 	/** Granted scopes, for OAuth callers only; sessions and API keys have full access. */
 	scopes?: OAuthScope[];
+	/** The OAuth app acting for the user, for OAuth callers only. */
+	appId?: string;
 }
+
+/**
+ * Rate-limit key for a caller: the user for their own session and API-key traffic, and a separate key per OAuth app
+ * so a third-party app can't use up the user's own limits.
+ */
+export const rateLimitKey = (caller: Caller) =>
+	caller.via === 'oauth' ? `${caller.userId}:oauth:${caller.appId}` : caller.userId;
 
 /** An OAuth access token, sent as `Authorization: Bearer waka_tok_…` or `?access_token=`. */
 export function extractAccessToken(request: Request): string | undefined {
@@ -59,7 +68,7 @@ export async function resolveCaller(request: Request): Promise<Caller | null> {
 	const accessToken = extractAccessToken(request);
 	if (accessToken) {
 		const grant = await oauthService.resolveAccessToken(accessToken);
-		return grant ? { userId: grant.userId, via: 'oauth', scopes: grant.scopes } : null;
+		return grant ? { userId: grant.userId, via: 'oauth', scopes: grant.scopes, appId: grant.appId } : null;
 	}
 
 	const apiKey = extractApiKey(request);

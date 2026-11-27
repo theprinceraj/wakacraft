@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z, type ZodType } from 'zod';
 
 import { connectMongo } from '@/lib/mongo/connection';
+import { rateLimitService, type RateLimitBucket } from '@/server/rate-limit/rate-limit.service';
 
-import { resolveCaller, type Caller } from './authenticate';
+import { rateLimitKey, resolveCaller, type Caller } from './authenticate';
 
 import type { OAuthScope } from '@/lib/util/OAuth';
 import {
@@ -37,6 +38,12 @@ export interface RouteOptions<
 	query?: Q;
 	body?: B;
 	params?: P;
+	/**
+	 * Counts one request against this bucket right after authentication: per user (and per OAuth app) when there is a
+	 * caller, per client IP otherwise, and not at all for anonymous callers without a trustworthy IP. Over the limit,
+	 * the request gets a 429 with `Retry-After` before any work is done.
+	 */
+	rateLimit?: RateLimitBucket;
 	/** Status for a successful non-`Response` result. */
 	status?: number;
 }
@@ -64,6 +71,20 @@ function validationError(error: z.ZodError): Response {
 	if (formErrors.length) errors._ = formErrors;
 
 	return NextResponse.json({ error: error.issues[0]?.message ?? 'Invalid request', errors }, { status: 400 });
+}
+
+/**
+ * The client's address, from headers the platform sets and clients can't forge: Vercel's `x-vercel-forwarded-for`,
+ * then a reverse proxy's `x-real-ip`. `x-forwarded-for` is client-controlled unless a proxy rewrites it, so it is
+ * read only with `TRUST_PROXY=true`. Null when none applies.
+ */
+function clientIp(request: NextRequest): string | null {
+	const firstHop = (name: string) => request.headers.get(name)?.split(',')[0]?.trim() || null;
+	return (
+		firstHop('x-vercel-forwarded-for') ??
+		firstHop('x-real-ip') ??
+		(process.env.TRUST_PROXY === 'true' ? firstHop('x-forwarded-for') : null)
+	);
 }
 
 async function readJsonBody(request: NextRequest): Promise<unknown> {
@@ -109,6 +130,14 @@ export function route<
 					} else if (!options.scope) throw new ForbiddenException('This endpoint is not available to OAuth apps');
 					else if (!allowed) throw new ForbiddenException(`This token is missing the ${options.scope} scope`);
 				}
+			}
+
+			if (options.rateLimit) {
+				// Anonymous callers are counted per IP; with no trustworthy IP they aren't counted, rather than all sharing
+				// one bucket that a single client could exhaust for everyone.
+				const ip = caller ? null : clientIp(request);
+				const key = caller ? rateLimitKey(caller) : ip && `ip:${ip}`;
+				if (key) await rateLimitService.consume(key, options.rateLimit);
 			}
 
 			const parse = (schema: ZodType | undefined, input: unknown) => {

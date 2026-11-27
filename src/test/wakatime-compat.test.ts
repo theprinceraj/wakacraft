@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { GET as getApiKeys } from '@/app/api/v1/users/[user]/api_keys/route';
@@ -15,6 +16,7 @@ import { mongoDailySummaryService } from '@/lib/mongo/daily-summary/daily-summar
 import { mongoHeartbeatService } from '@/lib/mongo/heartbeat/heartbeat.service';
 import { addDays, localDayBounds, todayIn } from '@/lib/util/Time';
 import { apiKeyService } from '@/server/api-key/api-key.service';
+import { LIMITS, rateLimitService } from '@/server/rate-limit/rate-limit.service';
 import { UpdateSettingsSchema } from '@/server/user/user.request.dto';
 
 import { basicAuth, call, CLI_USER_AGENT } from './api';
@@ -284,5 +286,29 @@ describe('account endpoints', () => {
 			headers: basicAuth(apiKey),
 		});
 		expect(status).toBe(403);
+	});
+});
+
+describe('rate limits', () => {
+	it('leave room for wakatime-cli --today and status bars polling every minute', () => {
+		const perMinute = LIMITS.aggregate.limit / (LIMITS.aggregate.windowSeconds / 60);
+		// Ten editor windows plus a status-bar widget, each polling once a minute, with headroom to spare.
+		expect(perMinute).toBeGreaterThanOrEqual(10 * 11);
+	});
+
+	it('answers an exhausted statusbar/today with 429, Retry-After and an error body', async () => {
+		const { user } = await signUpTestUser({ body: { email: 'poller@wakacraft.test', name: 'Poller' } });
+		const { key } = await apiKeyService.create(user.id, 'Poller');
+		await rateLimitService.consume(user.id, 'aggregate', LIMITS.aggregate.limit);
+
+		const response = await getStatusBar(
+			new NextRequest(new URL('/api/v1/users/current/statusbar/today', 'http://localhost:3000'), {
+				headers: cliHeaders(key),
+			}),
+			{ params: Promise.resolve({ user: 'current' }) },
+		);
+		expect(response.status).toBe(429);
+		expect(Number(response.headers.get('retry-after'))).toBeGreaterThan(0);
+		expect(await response.json()).toEqual({ error: expect.stringMatching(/Rate limit/) });
 	});
 });

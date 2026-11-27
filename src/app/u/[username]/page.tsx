@@ -22,9 +22,31 @@ import { publicProfileService } from '@/server/user/public-profile.service';
 import type { StatItem } from '@/server/stats/stats.response.dto';
 import type { Metadata } from 'next';
 
+/** The `[username]` segment, or null when it isn't valid percent-encoding (e.g. `/u/%E0%A4`). */
+const decodeUsername = (segment: string) => {
+	try {
+		return decodeURIComponent(segment);
+	} catch {
+		return null;
+	}
+};
+
 export async function generateMetadata({ params }: PageProps<'/u/[username]'>): Promise<Metadata> {
-	const { username } = await params;
-	return { title: `@${decodeURIComponent(username)}` };
+	const username = decodeUsername((await params).username);
+	await Promise.all([connection(), connectMongo()]);
+	const profile = username ? await publicProfileService.getProfile(username).catch(() => null) : null;
+	// Don't describe a profile that doesn't exist; the page itself renders the 404.
+	if (!profile) return { title: 'Profile not found' };
+
+	const handle = `@${profile.username}`;
+	const description = `${handle}'s public coding activity on wakacraft, the open-source WakaTime alternative.`;
+	// Next replaces, not merges, the parent's openGraph and twitter objects, so repeat siteName and card here.
+	return {
+		title: handle,
+		description,
+		openGraph: { type: 'profile', siteName: 'wakacraft', title: `${handle} · wakacraft`, description },
+		twitter: { card: 'summary_large_image', title: `${handle} · wakacraft`, description },
+	};
 }
 
 export default function PublicProfilePage({ params }: PageProps<'/u/[username]'>) {
@@ -57,7 +79,9 @@ async function Profile({ params }: Pick<PageProps<'/u/[username]'>, 'params'>) {
 	const { username } = await params;
 	// Live data: render per request rather than prerendering the profile.
 	await Promise.all([connection(), connectMongo()]);
-	const view = await publicProfileService.getPageView(decodeURIComponent(username)).catch((error) => {
+	const decoded = decodeUsername(username);
+	if (!decoded) notFound();
+	const view = await publicProfileService.getPageView(decoded).catch((error) => {
 		if (error instanceof NotFoundException) notFound();
 		throw error;
 	});

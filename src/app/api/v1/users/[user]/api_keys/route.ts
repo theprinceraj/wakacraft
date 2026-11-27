@@ -9,7 +9,7 @@ export const GET = route({ auth: 'session', params: UserParamSchema }, async ({ 
 
 /** The plaintext `key` is only ever returned here. */
 export const POST = route(
-	{ auth: 'session', params: UserParamSchema, body: CreateApiKeySchema, status: 201 },
+	{ auth: 'session', rateLimit: 'api_keys', params: UserParamSchema, body: CreateApiKeySchema, status: 201 },
 	async ({ caller, params, body }) => {
 		const { key, apiKey } = await apiKeyService.create(await requireSelf(params.user, caller), body.name);
 		return { data: { ...toApiKeyResponse(apiKey), key } };

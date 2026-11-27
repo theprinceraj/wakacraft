@@ -110,10 +110,10 @@ class LeaderboardService {
 
 	/** The public leaderboard: everyone with a username who made their coding time public. */
 	public async publicLeaders(query: { language?: string; page: number }) {
-		const profiles = await mongoUserProfileService.find({ loggedTimePublic: true, username: { $type: 'string' } }, [
-			'userId',
-			'languagesUsedPublic',
-		]);
+		const profiles = await mongoUserProfileService.find(
+			{ loggedTimePublic: true, isDemo: { $ne: true }, username: { $type: 'string' } },
+			['userId', 'languagesUsedPublic'],
+		);
 		const languagesPublic = new Set(
 			profiles.filter((profile) => profile.languagesUsedPublic).map((profile) => profile.userId),
 		);

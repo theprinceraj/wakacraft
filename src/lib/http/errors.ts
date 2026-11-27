@@ -47,3 +47,9 @@ export class TooManyRequestsException extends HttpError {
 		super(429, message);
 	}
 }
+
+export class ConflictException extends HttpError {
+	public constructor(message = 'Conflict') {
+		super(409, message);
+	}
+}

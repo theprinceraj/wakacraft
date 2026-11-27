@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth/auth';
-import { NotFoundException } from '@/lib/http/errors';
+import { NotFoundException, UnauthorizedException } from '@/lib/http/errors';
 
 import { userProfileService } from './user-profile.service';
 import { toUserResponse, type UserResponse } from './user.response.dto';
@@ -18,6 +18,19 @@ class UserService {
 			emailVerified: Boolean(authUser.emailVerified),
 			image: authUser.image ?? null,
 		});
+	}
+
+	/**
+	 * Refuses with 401 once the Better Auth user is gone. A deleted account's other devices keep a cookie-cached session
+	 * for up to `session.cookieCache.maxAge`; anything that issues a credential checks this so none outlives the account.
+	 */
+	public async assertExists(userId: string): Promise<void> {
+		if (!(await this.exists(userId))) throw new UnauthorizedException('This account no longer exists');
+	}
+
+	/** Whether the Better Auth user still exists (read from the database, never a cached session). */
+	public async exists(userId: string): Promise<boolean> {
+		return Boolean(await (await auth.$context).internalAdapter.findUserById(userId));
 	}
 
 	public async updateSettings(userId: string, input: UpdateSettingsInput): Promise<UserResponse> {

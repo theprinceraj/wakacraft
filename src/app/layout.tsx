@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { PUBLIC_ORIGIN } from '@/lib/public-origin';
 import { THEME_SCRIPT } from '@/lib/theme-script';
 
 import type { Metadata } from 'next';
@@ -11,10 +12,15 @@ import './globals.css';
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
+const description =
+	'Open-source WakaTime alternative: automatic time tracking for developers that works with every WakaTime editor plugin.';
+
 export const metadata: Metadata = {
+	metadataBase: new URL(PUBLIC_ORIGIN),
 	title: { default: 'wakacraft', template: '%s · wakacraft' },
-	description:
-		'Open-source WakaTime alternative: automatic time tracking for developers that works with every WakaTime editor plugin.',
+	description,
+	openGraph: { siteName: 'wakacraft', type: 'website', title: 'wakacraft', description },
+	twitter: { card: 'summary_large_image', title: 'wakacraft', description },
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

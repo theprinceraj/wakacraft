@@ -12,6 +12,7 @@ import {
 	REFRESH_TOKEN_PREFIX,
 	type OAuthScope,
 } from '@/lib/util/OAuth';
+import { userService } from '@/server/user/user.service';
 
 import type { IOAuthAppZodSchema } from '@/lib/mongo/zod';
 import type { AuthorizeQuery, OAuthAppInput, RevokeRequest, TokenRequest } from './oauth.request.dto';
@@ -175,6 +176,8 @@ class OAuthService {
 
 	/** The user approved: returns where to send their browser, carrying a one-time code. */
 	public async approve(userId: string, query: AuthorizeQuery): Promise<string> {
+		// A deleted account's other devices keep a cookie-cached session for a minute: don't let one mint a code.
+		await userService.assertExists(userId);
 		const described = await this.describeAuthorization(query);
 		if (described.problem) return this.errorRedirect(query, described.problem);
 
@@ -251,6 +254,7 @@ class OAuthService {
 	}
 
 	private async issue(appId: string, userId: string, scopes: OAuthScope[]) {
+		if (!(await userService.exists(userId))) throw new OAuthError('invalid_grant', 'The account no longer exists', 401);
 		const accessToken = token(ACCESS_TOKEN_PREFIX);
 		const refreshToken = token(REFRESH_TOKEN_PREFIX);
 		const expiresAt = new Date(Date.now() + ACCESS_TTL_SECONDS * 1000);
